@@ -15,7 +15,7 @@ class BaseDiagnoser:
     }
 
     def __init__(self, input_path, output_path, cfg):
-        self.input = input_path,
+        self.input = input_path
         self.output = output_path
         self.cfg = cfg
         self.log = init_job_logger(output_path, self.JOB_NAME)
