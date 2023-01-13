@@ -56,5 +56,5 @@ def get_file_list(files_path_dict):
     """
     log_file = list()
     log_file.extend(files_path_dict.get("plog_path", None))
-    log_file.extend(files_path_dict.get("npu_info_path_path", None))
+    log_file.extend(files_path_dict.get("npu_info_path", None))
     return log_file
