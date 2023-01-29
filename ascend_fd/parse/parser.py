@@ -2,7 +2,7 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 from ascend_fd.log import init_job_logger
 from ascend_fd.status import BaseError, SuccessRet, InnerError
-from ascend_fd.pkg import start_rc_parse_job, start_kg_parse_job, start_net_parse_job, start_node_parse_job
+from ascend_fd.pkg import start_rc_parse_job, start_kg_parse_job
 
 
 class BaseParser:
@@ -40,25 +40,11 @@ class RcParser(BaseParser):
     JOB_NAME = "rc_parse"
 
     def start_job(self):
-        start_rc_parse_job(self.input, self.output, self.cfg)
+        start_rc_parse_job(self.output, self.cfg)
 
 
 class KgParser(BaseParser):
     JOB_NAME = "kg_parse"
 
     def start_job(self):
-        start_kg_parse_job(self.input, self.output, self.cfg)
-
-
-class NodeParser(BaseParser):
-    JOB_NAME = "node_parse"
-
-    def start_job(self):
-        start_node_parse_job(self.input, self.output, self.cfg)
-
-
-class NetParser(BaseParser):
-    JOB_NAME = "net_parse"
-
-    def start_job(self):
-        start_net_parse_job(self.input, self.output, self.cfg)
+        start_kg_parse_job(self.output, self.cfg)

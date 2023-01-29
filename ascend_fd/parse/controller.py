@@ -4,14 +4,14 @@ import os
 import re
 import multiprocessing
 
-from ascend_fd import config
+from ascend_fd import regular_rule
 from ascend_fd.status import BaseError, InfoNotFoundError
 from ascend_fd.log import init_main_logger, LOG_WIDTH
-from ascend_fd.parse.parser import RcParser, KgParser, NodeParser, NetParser
+from ascend_fd.parse.parser import RcParser, KgParser
 
 
 class ParseController:
-    PARSE_CATEGORY = ["Rc", "Node", "Net"]
+    PARSE_CATEGORY = ["Rc"]
     OUT_DIR = "fault_diag_data"
 
     def __init__(self, args):
@@ -24,41 +24,27 @@ class ParseController:
     @staticmethod
     def init_config(input_path):
         plog_path = list()
-        npu_smi_path = list()
         npu_info_path = list()
-        npu_detail_path = list()
-        delay_path = list()
         worker_id = ""
         for root, _, files in os.walk(input_path):
             for file in files:
                 file_path = os.path.join(root, file)
-                if re.match(config.PLOG_ORIGIN_RE, file) and "plog" in root:
+                if re.match(regular_rule.PLOG_ORIGIN_RE, file) and "plog" in root:
                     plog_path.append(file_path)
                     continue
-                if re.match(config.NPU_SMI_RE, file) and re.match(config.WORKER_DIR_RE, os.path.basename(root)):
-                    npu_smi_path.append(file_path)
-                    continue
-                if re.match(config.NPU_DETAILS_RE, file) and re.match(config.WORKER_DIR_RE, os.path.basename(root)):
-                    npu_detail_path.append(file_path)
-                    continue
-                if re.match(config.NPU_INFO_RE, file) and re.match(config.WORKER_DIR_RE, os.path.basename(root)) \
+                if re.match(regular_rule.NPU_INFO_RE, file) and \
+                        re.match(regular_rule.WORKER_DIR_RE, os.path.basename(root)) \
                         and os.path.basename(os.path.dirname(root)) == "environment_check":
                     npu_info_path.append(file_path)
                     continue
-                if re.match(config.MODEL_ARTS_RANK_RE, file):
-                    delay_path.append(file_path)
-                    continue
 
-                worker_re = re.match(config.MODEL_ARTS_WORKER_RE, file)
+                worker_re = re.match(regular_rule.MODEL_ARTS_WORKER_RE, file)
                 if worker_re:
                     worker_id = worker_re[1]
 
         return {
             "plog_path": plog_path,
-            "npu_smi_path": npu_smi_path,
             "npu_info_path": npu_info_path,
-            "npu_detail_path": npu_detail_path,
-            "delay_path": delay_path,
             "worker_id": worker_id
         }
 
@@ -67,7 +53,7 @@ class ParseController:
         start the parse log job
         """
         self.logger.info("Start the log-parse job.".center(LOG_WIDTH, "-"))
-        pool = multiprocessing.Pool(3)
+        pool = multiprocessing.Pool(len(self.PARSE_CATEGORY))
         for name in self.PARSE_CATEGORY:
             pool.apply_async(self.parsers.get(name).parse, callback=self.log_callback)
         pool.close()
@@ -91,13 +77,11 @@ class ParseController:
 
     def generate_parser(self):
         """
-        generate 4 parsers
+        generate parsers
         """
         parsers = dict()
         parsers["Rc"] = RcParser(self.input_path, self.output_path, self.cfg)
         parsers["Kg"] = KgParser(self.input_path, self.output_path, self.cfg)
-        parsers["Node"] = NodeParser(self.input_path, self.output_path, self.cfg)
-        parsers["Net"] = NetParser(self.input_path, self.output_path, self.cfg)
         return parsers
 
     def generate_output_path(self, output_path):
@@ -107,7 +91,6 @@ class ParseController:
         """
         worker_id = self.cfg.get("worker_id", None)
         if not worker_id:
-            self.logger.error()
             raise InfoNotFoundError("cannot find worker id, please check whether the input path is correct.")
         output_path = os.path.join(output_path, self.OUT_DIR, f"worker-{worker_id}")
         os.makedirs(output_path, 0o700, exist_ok=True)

@@ -5,7 +5,7 @@ import re
 import math
 from multiprocessing import Pool
 
-from ascend_fd.status import FileNotExistError
+from ascend_fd.status import FileNotExistError, ParamError
 from ascend_fd.tool import safe_open
 from ascend_fd.pkg.kg_parse.log_parser.format_support.bmc_log_file_parser import BMCLogFileParser
 from ascend_fd.pkg.kg_parse.utils.log_record import logger
@@ -17,8 +17,10 @@ MAX_PROCESS_NUM = 10
 
 class LineParser:
     """每一行的解析器"""
-    def __init__(self, name, regex, file_filter=None, parm_regex=None, parm_dict_func=None, parm_regex1=None,
-                 parm_dict_func1=None, keywords=None):
+    def __init__(self, name, regex, file_filter=None,
+                 parm_regex=None, parm_dict_func=None,
+                 parm_regex1=None, parm_dict_func1=None,
+                 keywords=None):
         self.name = name
         self.regex = regex
         self.file_filter = file_filter
@@ -70,11 +72,6 @@ class LineParser:
 
 class PlogParser(BMCLogFileParser):
     """根据提供的正则表达式对文件每行数据进行解析及数据提取"""
-    VALID_PARAMS = {}
-    TARGET_FILE_PATTERNS = [
-        "plog",
-    ]
-
     """parm_regex， parm_dict_func 以文件路径作为输入获取device id；parm_regex1，parm_dict_func1以文本中参数匹配获取module"""
     LINE_PARSERS = [
         LineParser(name="RuntimeTaskException",
@@ -136,74 +133,61 @@ class PlogParser(BMCLogFileParser):
         LineParser(name="FailedToApplyForResources",
                    regex=re.compile(
                        r".*?halResourceIdAlloc.*?failed.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["halResourceIdAlloc", "failed"],
                    ),
         LineParser(name="RegisteredResourcesExceedsTheMaximum",
                    regex=re.compile(
                        r".*?Program register failed.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["Program register failed"],
                    ),
         LineParser(name="FailedToexecuteTheAICoreOperator",
                    regex=re.compile(
                        r".*?PrintErrorInfo.*?fault kernel_name.*?func_name.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["PrintErrorInfo", "fault kernel_name", "func_name"],
                    ),
         LineParser(name="ExecuteModelFailed",
                    regex=re.compile(
                        r".*?ModelExecute.*?Execute model failed.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["ModelExecute", "Execute model failed"],
                    ),
         LineParser(name="FailedToexecuteTheAICpuOperator",
                    regex=re.compile(
                        r".*?PrintAicpuErrorInfo.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["PrintAicpuErrorInfo"],
                    ),
         LineParser(name="MemoryAsyncCopyFailed",
                    regex=re.compile(
                        r".*?Memory async copy failed.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["Memory async copy failed"],
                    ),
         LineParser(name="NotifyWaitExecuteFailed",
                    regex=re.compile(
                        r".*?Notify wait execute failed.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["Notify wait execute failed"],
                    ),
         LineParser(name="TaskRunFailed",
                    regex=re.compile(
                        r".*?Task run failed.*?Notify Wait.*?"),
-                   file_filter="rank",
-                   parm_regex=re.compile(r"(rank_\d+)"),
-                   parm_dict_func=lambda p: {"rank_id": p.replace(" ", "")},
+                   file_filter="plog",
                    keywords=["Task run failed", "Notify Wait"],
                    ),
     ]
 
-    def __init__(self, configs: dict):
-        super().__init__(configs)
+    VALID_PARAMS = {}
+    TARGET_FILE_PATTERNS = ["plog_path"]
+
+    def __init__(self):
+        super().__init__()
 
     def parse(self, file_path: str):
-        _desc = dict()
+        desc = dict()
         if not os.path.isfile(file_path):
             raise FileNotExistError("file '%s' not exists." % file_path)
         logger.info("start parse %s", file_path)
@@ -215,7 +199,10 @@ class PlogParser(BMCLogFileParser):
                 results.append(pool.apply_async(self.handle_parse, args=(lines, file_path)))
                 pool.close()
             else:
-                process_num = math.ceil(len(lines) / LINE_NUM)
+                if LINE_NUM != 0:
+                    process_num = math.ceil(len(lines) / LINE_NUM)
+                else:
+                    process_num = MAX_PROCESS_NUM
                 logger.info("len(lines): %d", len(lines))
                 logger.info("process_num: %d", process_num)
                 pool = Pool(min(process_num, MAX_PROCESS_NUM))
@@ -224,35 +211,32 @@ class PlogParser(BMCLogFileParser):
                     end_index = min(start_index + LINE_NUM, len(lines))
                     logger.info("start index: %d, end index: %d", start_index, end_index)
                     results.append(pool.apply_async(self.handle_parse, args=(lines[start_index:end_index], file_path)))
-
                 pool.close()
-            _desc["events"] = list()
+            desc["events"] = list()
             for result in results:
                 rst = result.get()
                 if rst:
-                    _desc["events"].extend(rst)
+                    desc.setdefault("events", []).extend(rst)
         logger.info("end parse %s", file_path)
 
-        if "events" in _desc and len(_desc["events"]) > 0:
-            _desc["parse_next"] = True
-            return _desc
+        if "events" in desc and len(desc.get("events", [])) > 0:
+            desc["parse_next"] = True
+            return desc
         return {"parse_next": True}
 
     def handle_parse(self, lines, file_path):
         parser_results = []
-        matched = [0 for i in range(len(lines))]
+        matched = [0 for _ in range(len(lines))]
         for line_parser in self.LINE_PARSERS:
             if not line_parser.file_check(file_path):
                 continue
-            line_index = 0
             keywords = line_parser.get_keywords()
-            for _l in lines:
-                line_index += 1
-                if matched[line_index - 1] == 1:
+            for index, line in enumerate(lines):
+                if matched[index] == 1:
                     continue
-                _l = _l.strip()
+                line = line.strip()
                 """ts.txt可能存在\00字符，导致循环无法退出"""
-                line = _l.replace('\00', '')
+                line = line.replace('\00', '')
 
                 keyword_num = 0
                 for keyword in keywords:
@@ -264,7 +248,7 @@ class PlogParser(BMCLogFileParser):
 
                 event_dict = line_parser.parse(line, file_path)
                 if event_dict:
-                    matched[line_index - 1] = 1
+                    matched[index] = 1
                     if "ascend" in file_path:
                         event_dict["file_name"] = "ascend"
                         event_dict["file_path"] = "ascend" + file_path.split("ascend")[-1]

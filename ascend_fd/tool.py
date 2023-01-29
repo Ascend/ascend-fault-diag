@@ -2,7 +2,7 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 import os
 import stat
-import pandas as pd
+import subprocess
 
 from ascend_fd.status import FileNotExistError, FileOpenError
 
@@ -48,10 +48,8 @@ def safe_open(file, *args, **kwargs):
     return file_stream
 
 
-def safe_read_csv(file, *args, **kwargs):
-    """
-    safe read csv file by pandas.
-    """
-    with safe_open(file) as file_stream:
-        data = pd.read_csv(file_stream, *args, **kwargs)
-    return data
+def popen_grep(para_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+    cmd_list = ["/usr/bin/grep"] + para_list
+    if stdin:
+        return subprocess.Popen(cmd_list, shell=False, stdin=stdin, stdout=stdout, stderr=stderr)
+    return subprocess.Popen(cmd_list, shell=False, stdout=stdout, stderr=stderr)

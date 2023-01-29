@@ -48,9 +48,11 @@ class InnerError(BaseError):
     description = "Inner error, please check detail log."
 
 
+class ParamError(BaseError):
+    code = 508
+    description = "ParamError."
+
+
 class SuccessRet:
     code = 200
     description = "Successful operation."
-
-
-ERRORS = (BaseError, )

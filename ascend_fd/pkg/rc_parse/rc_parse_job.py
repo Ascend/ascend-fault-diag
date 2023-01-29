@@ -7,7 +7,7 @@ import subprocess
 
 from ascend_fd.tool import verify_file, safe_open
 from ascend_fd.status import FileNotExistError, InnerError
-from ascend_fd.config import PLOG_ORIGIN_RE
+from ascend_fd.regular_rule import PLOG_ORIGIN_RE
 
 rc_logger = logging.getLogger("rc_parse.log")
 PARSE_RULE = {
@@ -18,7 +18,7 @@ PARSE_RULE = {
 CATEGORY = ["trace", "event", "error"]
 
 
-def start_rc_parse_job(input_path, output_path, cfg):
+def start_rc_parse_job(output_path, cfg):
     """
     start root cluster parse job.
     """

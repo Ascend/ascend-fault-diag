@@ -7,7 +7,7 @@ import pytest
 
 from ascend_fd.pkg.rc_parse import start_rc_parse_job
 
-from ascend_fd.status import FileNotExitsError
+from ascend_fd.status import FileNotExistError
 
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 DT_DIR = os.path.join(TEST_DIR, "dt_dir")
@@ -24,8 +24,8 @@ class RCParseTestCase(unittest.TestCase):
             os.makedirs(self.temp_dir)
 
     def test_empty_input_path(self):
-        with pytest.raises(FileNotExitsError, match="no plog file that meets the path specifications is found."):
-            start_rc_parse_job(self.temp_dir, self.temp_dir, self.cfg)
+        with pytest.raises(FileNotExistError, match="no plog file that meets the path specifications is found."):
+            start_rc_parse_job(self.temp_dir, self.cfg)
 
     def test_plog_file(self):
         plog_dir = os.path.join(self.temp_dir, "plog")
@@ -34,7 +34,7 @@ class RCParseTestCase(unittest.TestCase):
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
         with os.fdopen(os.open('testfile.txt', flags, 0o600), 'w') as test:
             test.write('test!')
-        start_rc_parse_job(self.temp_dir, self.temp_dir, self.cfg)
+        start_rc_parse_job(self.temp_dir, self.cfg)
         shutil.rmtree(plog_dir)
 
     def tearDown(self) -> None:

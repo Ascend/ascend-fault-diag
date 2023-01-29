@@ -8,15 +8,13 @@ import multiprocessing
 from ascend_fd.tool import safe_open
 from ascend_fd.status import BaseError
 from ascend_fd.log import init_main_logger, LOG_WIDTH
-from ascend_fd.diag.diagnoser import KgDiagnoser, NodeDiagnoser, NetDiagnoser
-from ascend_fd.config import PLOG_PARSE_RE
+from ascend_fd.diag.diagnoser import KgDiagnoser
+from ascend_fd.regular_rule import PLOG_PARSE_RE
 
 
 class DiagController:
     TASK_CATEGORY = {
         1: "Kg",
-        2: "Node",
-        3: "Net"
     }
     OUT_DIR = "fault_diag_result"
 
@@ -28,7 +26,7 @@ class DiagController:
         self.is_print = args.print
         self.logger = init_main_logger(self.output_path)
 
-        self.diag_task = self.get_diag_task(args.task)
+        self.diag_task = ["Kg"]
         self.diagnosers = self.generate_diagnoser()
         self.diag_results = dict()
 
@@ -40,7 +38,7 @@ class DiagController:
             if not worker_dir.startswith("worker-"):
                 continue
             plog_parser_path = list()
-            nad_clean_path, nic_clean_path, kg_parse_path = "", "", ""
+            kg_parse_path = ""
 
             worker_path = os.path.join(input_path, worker_dir)
             files = os.listdir(worker_path)
@@ -49,20 +47,12 @@ class DiagController:
                 if re.match(PLOG_PARSE_RE, file):
                     plog_parser_path.append(file_path)
                     continue
-                if file == "nad_clean.csv":
-                    nad_clean_path = file_path
-                    continue
-                if file == "nic_clean.csv":
-                    nic_clean_path = file_path
-                    continue
                 if file == "ascend-kg-parser.json":
                     kg_parse_path = file_path
                     continue
             parse_data.update({
                 worker_dir: {
                     "plog_parser_path": plog_parser_path,
-                    "nad_clean_path": nad_clean_path,
-                    "nic_clean_path": nic_clean_path,
                     "kg_parse_path": kg_parse_path
                 }
             })
@@ -77,7 +67,7 @@ class DiagController:
         start the falt-diag job
         """
         self.logger.info("Start the falt-diag job.".center(LOG_WIDTH, "-"))
-        pool = multiprocessing.Pool(3)
+        pool = multiprocessing.Pool(len(self.diag_task))
         for name in self.diag_task:
             pool.apply_async(self.diagnosers.get(name).diag, callback=self.log_callback)
         pool.close()
@@ -92,11 +82,7 @@ class DiagController:
             "Ascend-RC-Worker-Rank-Analyze Result":
                 self.diag_results.get("Ascend-RC-Worker-Rank-Analyze Result"),
             "Ascend-Knowledge-Graph-Fault-Diag Result":
-                self.diag_results.get("Ascend-Knowledge-Graph-Fault-Diag Result"),
-            "Ascend-Node-Fault-Diag Result":
-                self.diag_results.get("Ascend-Node-Fault-Diag Result"),
-            "Ascend-Net-Fault-Diag Result":
-                self.diag_results.get("Ascend-Net-Fault-Diag Result")
+                self.diag_results.get("Ascend-Knowledge-Graph-Fault-Diag Result")
         }
 
         with safe_open(out_file, "w+", encoding="utf-8") as file_stream:
@@ -118,14 +104,4 @@ class DiagController:
         """
         diagnoser = dict()
         diagnoser["Kg"] = KgDiagnoser(self.input_path, self.output_path, self.cfg)
-        diagnoser["Node"] = NodeDiagnoser(self.input_path, self.output_path, self.cfg)
-        diagnoser["Net"] = NetDiagnoser(self.input_path, self.output_path, self.cfg)
         return diagnoser
-
-    def get_diag_task(self, task_id):
-        """
-        obtain the diag task.
-        """
-        if task_id == 0:
-            return ["Kg", "Node", "Net"]
-        return [self.TASK_CATEGORY.get(task_id)]

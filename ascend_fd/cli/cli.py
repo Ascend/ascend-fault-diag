@@ -42,16 +42,12 @@ def command_line():
                           help="the input path of parsed data file")
     diag_cmd.add_argument("-o", "--output_path", type=str, required=True,
                           help="the output path of result file")
-    diag_cmd.add_argument("-t", "--task", type=int, default=0, choices=[0, 1, 2, 3],
-                          help="the diag task id, please input one of [0,1,2,3]. "
-                               "0: execute all task, 1: kg diag task, 2: node diag task, 3: net diag task."
-                               "default 0.")
     diag_cmd.add_argument("-m", "--mode", type=int, default=0, choices=[0, 1],
                           help="Indicates whether a force-kill scenario is used. "
-                               "0: force-kill, 2: not force-kill. default 0.")
+                               "0: force-kill, 1: not force-kill. default 0.")
     diag_cmd.add_argument("-p", "--print", action="store_true",
                           help="Indicate whether to print the result. "
-                               "If no paramter is specified, the result is not printed.")
+                               "If no parameter is specified, the result is not printed.")
 
     return args.parse_args()
 

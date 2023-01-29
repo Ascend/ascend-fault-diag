@@ -2,7 +2,7 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 from ascend_fd.log import init_job_logger
 from ascend_fd.status import BaseError, InnerError, SuccessRet
-from ascend_fd.pkg import start_rc_diag_job, start_kg_diag_job, start_net_diag_job, start_node_diag_job
+from ascend_fd.pkg import start_rc_diag_job, start_kg_diag_job
 
 
 class BaseDiagnoser:
@@ -56,39 +56,13 @@ class KgDiagnoser(BaseDiagnoser):
     }
 
     def start_job(self):
-        result, worker_list = start_rc_diag_job(self.input, self.output, self.cfg)
+        result, worker_list = start_rc_diag_job(self.output, self.cfg)
         self.err_result.update(result)
 
         if not worker_list:
             self.log.warning("the root cause node is not found, so the knowledge graph diag task is not started.")
             raise InnerError("the root cause node is not found, so the knowledge graph diag task is not started.")
 
-        kg_result = start_kg_diag_job(self.input, self.output, worker_list, self.cfg)
+        kg_result = start_kg_diag_job(self.output, worker_list, self.cfg)
         result.update(kg_result)
         return result
-
-
-class NodeDiagnoser(BaseDiagnoser):
-    JOB_NAME = "node_diag"
-    err_result = {
-        "Ascend-Node-Fault-Diag Result": {
-            "analyze_success": False,
-            "engine_ver": "v1.0.0"
-        }
-    }
-
-    def start_job(self):
-        return start_node_diag_job(self.input, self.output, self.cfg)
-
-
-class NetDiagnoser(BaseDiagnoser):
-    JOB_NAME = "net_diag"
-    err_result = {
-        "Ascend-Net-Fault-Diag Result": {
-            "analyze_success": False,
-            "engine_ver": "v1.0.0"
-        }
-    }
-
-    def start_job(self):
-        return start_net_diag_job(self.input, self.output, self.cfg)
