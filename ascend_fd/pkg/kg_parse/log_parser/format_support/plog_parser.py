@@ -5,7 +5,7 @@ import re
 import math
 from multiprocessing import Pool
 
-from ascend_fd.status import FileNotExistError, ParamError
+from ascend_fd.status import FileNotExistError
 from ascend_fd.tool import safe_open
 from ascend_fd.pkg.kg_parse.log_parser.format_support.bmc_log_file_parser import BMCLogFileParser
 from ascend_fd.pkg.kg_parse.utils.log_record import logger
@@ -47,18 +47,18 @@ class LineParser:
 
             event_dict["event_type"] = self.name
             if self.parm_regex is not None:
-                ret = self.parm_regex.findall(file_path)[0]
-                params = self.parm_dict_func(ret)
-                event_dict["params"] = params
+                ret = self.parm_regex.findall(file_path)
+                if ret:
+                    params = self.parm_dict_func(ret)
+                    event_dict["params"] = params
             if self.parm_regex1 is not None:
-                ret = self.parm_regex1.findall(desc)[0]
-                params = self.parm_dict_func1(ret)
-                event_dict["params1"] = params
+                ret = self.parm_regex1.findall(desc)
+                if ret:
+                    params = self.parm_dict_func1(ret)
+                    event_dict["params1"] = params
         return event_dict
 
     def file_check(self, file_path):
-        if self.name == "Time":
-            return True
         if self.parm_regex is None:
             return True
         ret = self.parm_regex.findall(file_path)
@@ -213,7 +213,6 @@ class PlogParser(BMCLogFileParser):
                     logger.info("start index: %d, end index: %d", start_index, end_index)
                     results.append(pool.apply_async(self.handle_parse, args=(lines[start_index:end_index], file_path)))
                 pool.close()
-            desc["events"] = list()
             for result in results:
                 rst = result.get()
                 if rst:
@@ -250,11 +249,5 @@ class PlogParser(BMCLogFileParser):
                 event_dict = line_parser.parse(line, file_path)
                 if event_dict:
                     matched[index] = 1
-                    if "ascend" in file_path:
-                        event_dict["file_name"] = "ascend"
-                        event_dict["file_path"] = "ascend" + file_path.split("ascend")[-1]
-                    else:
-                        event_dict["file_name"] = "plog"
-                        event_dict["file_path"] = file_path
                     parser_results.append(event_dict)
         return parser_results

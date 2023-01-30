@@ -6,14 +6,6 @@ from ascend_fd.pkg.kg_parse.utils import logger
 from ascend_fd.status import InnerError
 
 
-class InvalidPackageTypeError(RuntimeError):
-    pass
-
-
-class UnpackPackageError(RuntimeError):
-    pass
-
-
 class BMCLogPackageParser(object):
     """日志包解析类"""
     VALID_PARAMS = {

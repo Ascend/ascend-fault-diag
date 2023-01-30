@@ -9,6 +9,7 @@ from ascend_fd.pkg.kg_parse.utils.log_record import logger
 from ascend_fd.tool import safe_open
 from ascend_fd.status import FileNotExistError
 
+
 class LineParser:
     """每一行的解析器"""
     def __init__(self, name, regex, parm_regex=None,

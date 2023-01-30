@@ -8,10 +8,6 @@ from ascend_fd.tool import safe_open
 from ascend_fd.status import InnerError
 
 
-class UpdateMethodNotSupportedError(RuntimeError):
-    pass
-
-
 class BMCLogDataDescriptor:
     VALID_FLAGS = {
         "parse_next",
@@ -21,49 +17,6 @@ class BMCLogDataDescriptor:
         self.data = dict()
         self.efficiency_valid_param = dict()
         self.disk_command_timeout_param = dict()
-        self.hardware_normal = True
-        self.hardware_events = [
-            "RaidFault",
-            "RAIDSelf-checkIsFailure",
-            "PowerFailure",
-            "DiskAFailure",
-            "DiskFault",
-            "CPUCEThresholdByPFAE",
-            "CPU_UCE",
-            "CableConnectIncorrectly",
-            "RAIDCardCommunicationLoss",
-            "MainBoardPowerAbnormal",
-            "MemCEThresholdByPFAE",
-            "MemCE",
-            "MemCEOverflow",
-            "MemCEThresholdByPFAE",
-            "MemFailure",
-            "MemConfigurationEerror",
-            "Mcerr",
-            "CPUOverHeating",
-            "Caterr",
-            "CaterrDiagnose",
-            "IERR",
-            "CPU_UCE",
-            "GetCPUTemperatureFailure",
-            "GetMEMTemperatureFailure",
-            "CPU_CE",
-            "CPU_PollutionArea",
-            "HostCheckerTimeout",
-            "PowerFailure",
-            "CPU_VRD_Failed",
-            "ClockSignalLost",
-            "hllc_int_re_training",
-            "IERRDiagnoseFailure",
-            "RAID_UCE",
-            "RaidCEThreshold",
-            "LinkBitError",
-            "RAIDCardCommunicationLoss",
-            "PCIE_Fault",
-            "PCIE_UCE",
-            "PCIE_CE",
-            "Multi_PCIE_UCE",
-        ]
 
     def __str__(self):
         return json.dumps(self.data, sort_keys=False, indent=4, separators=(',', ':'), ensure_ascii=False)
@@ -89,17 +42,6 @@ class BMCLogDataDescriptor:
                 else:
                     return False
         return True
-
-    @staticmethod
-    def process_pcie(pcie_event):
-        if "params" in pcie_event and "slot" in pcie_event["params"]:
-            if pcie_event["params"]["slot"] != "unknown":
-                pcie_event["params"]["slot"] = "SLOT" + pcie_event["params"]["slot"]
-        elif "params" in pcie_event and "slot" not in pcie_event["params"]:
-            pcie_event["params"]["slot"] = "unknown"
-        else:
-            pcie_event["params"] = dict()
-            pcie_event["params"]["slot"] = "unknown"
 
     def clear(self):
         self.data.clear()
@@ -192,6 +134,7 @@ class BMCLogDataDescriptor:
                 self.data.setdefault(entity_keyname, []).append(entity_dict)
 
     def merge_same_entity(self, entities):
+        entities.sort(key=lambda x: x["RaiseTime"])
         now_length = len(entities)
         for index in range(now_length):
             try:
@@ -233,17 +176,8 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
         "Dev_os", "Dev_npu", "NPU", "RUNTIME", "GE"
     ]
     ATLAS_EVENT_NAMES = [
-        "HcclClusterNetworkFaulty", "MissionSocketTimeout", "MissionNotifyWaitTimeout", "MissionP2PTimeout",
-        "MissionConfigurationErr", "TheTimeoutThresholdTooLargeOnHccl", "InconsistentOperatorInitialization",
-        "OperatorTagsInconsistent", "TLSInconsistentSettings", "DeviceNoErrorReportedONSomeCard",
-        "ExistErr_task_type14", "TheErrReportingTimeGreaterThan500s", "TheKeywordErrorCqeExists",
-        "RankEnterTimeGreaterThan120s", "RanktableConfigurationErr", "MissionIpConfigurationErr",
-        "MissionNpuNetStatusErr", "SameDeviceIpErr", "VariedNetmaskErr", "SameNetSegErr", "DiffNetSegErr",
-        "DeviceLinkDown", "NetHealthFail", "HbmMultibitEccError", "TsException", "Dma0x80Err", "DmpGetDieidFailed",
-        "HwtsTimeoutException", "AicoreTaskException", "HisiTsException", "HisiDriverException", "HisiMultiEccErr",
-        "AICoreAIC_ERROR", "HwtsAicReset", "ResetRunningSlot", "NpuHasCriticalProblem", "RuntimeTaskException",
-        "RuntimeAicoreError", "RuntimeModelExecuteTaskFailed", "RuntimeAicoreKernelExecuteFailed",
-        "RuntimeStreamSyncFailed", "GEModelStreamSyncFailed", "GERunModelFail"
+        "RuntimeTaskException","RuntimeAicoreError", "RuntimeModelExecuteTaskFailed",
+        "RuntimeAicoreKernelExecuteFailed", "RuntimeStreamSyncFailed", "GEModelStreamSyncFailed", "GERunModelFail"
     ]
     SERVER_BIOS_DICT = {
         "RH1288 V3": "5.13",
@@ -264,12 +198,6 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
     def update_events(self, desc):
         desc.sort(key=lambda x: x["time"])
         for item in desc:
-            if item["event_type"] in self.hardware_events:
-                self.hardware_normal = False
-            if item["event_type"] == "TheHardwareNormal" and not self.hardware_normal:
-                continue
-            if "PCIE" in item["event_type"] or "NIC" in item["event_type"]:
-                self.process_pcie(item)
             event = dict()
             event["keyinfo"] = item["key_info"]
             if "f_time" in item:
