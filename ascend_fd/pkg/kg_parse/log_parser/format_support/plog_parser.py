@@ -49,12 +49,12 @@ class LineParser:
             if self.parm_regex is not None:
                 ret = self.parm_regex.findall(file_path)
                 if ret:
-                    params = self.parm_dict_func(ret)
+                    params = self.parm_dict_func(ret[0])
                     event_dict["params"] = params
             if self.parm_regex1 is not None:
                 ret = self.parm_regex1.findall(desc)
                 if ret:
-                    params = self.parm_dict_func1(ret)
+                    params = self.parm_dict_func1(ret[0])
                     event_dict["params1"] = params
         return event_dict
 
