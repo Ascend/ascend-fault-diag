@@ -4,6 +4,7 @@
 import os
 
 from ascend_fd.pkg.kg_parse.utils import logger
+from ascend_fd.status import FileNotExistError
 from ascend_fd.pkg.kg_parse.log_parser.parser.bmc_log_package_parser_temp import BMCLogPackageParser
 
 
@@ -21,7 +22,8 @@ class SingleJsonFileProcessing:
         :return:
         """
         if not os.path.isdir(result_path):
-            raise FileNotFoundError(f"result path {os.path.basename(result_path)} not found.")
+            logger.error(f"result path {os.path.basename(result_path)} not found.")
+            raise FileNotExistError(f"result path {os.path.basename(result_path)} not found.")
         package_parser = BMCLogPackageParser(self.config)
         logger.info("____start parse____")
         package_parser.parse()

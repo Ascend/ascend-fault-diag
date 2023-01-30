@@ -3,6 +3,7 @@
 from ascend_fd.pkg.kg_parse.log_parser.format_support import PlogParser, BMCLogFileParser, NpuInfoParser
 from ascend_fd.pkg.kg_parse.log_parser.parser.bmc_log_data_descriptor import DataDescriptorOfNAIE
 from ascend_fd.pkg.kg_parse.utils import logger
+from ascend_fd.status import InnerError
 
 
 class InvalidPackageTypeError(RuntimeError):
@@ -38,7 +39,8 @@ class BMCLogPackageParser(object):
     def add_parser(self, parser_cls):
         """添加解析器类"""
         if not issubclass(parser_cls, BMCLogFileParser):
-            raise TypeError("'parser_cls' must be sub-class of BMCLogFileParser")
+            logger.error("'parser_cls' must be sub-class of BMCLogFileParser")
+            raise InnerError("'parser_cls' must be sub-class of BMCLogFileParser")
         self.parsers.append(parser_cls())
 
     def parse(self):

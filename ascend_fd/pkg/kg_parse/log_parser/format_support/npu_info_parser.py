@@ -7,7 +7,7 @@ import time
 from ascend_fd.pkg.kg_parse.log_parser.format_support.bmc_log_file_parser import BMCLogFileParser
 from ascend_fd.pkg.kg_parse.utils.log_record import logger
 from ascend_fd.tool import safe_open
-
+from ascend_fd.status import FileNotExistError
 
 class LineParser:
     """每一行的解析器"""
@@ -86,7 +86,8 @@ class NpuInfoParser(BMCLogFileParser):
 
         for file_path in file_path_list:
             if not os.path.isfile(file_path):
-                raise FileNotFoundError("file '%s' not exists." % file_path)
+                logger.error(f"file {os.path.basename(file_path)} not exists.")
+                raise FileNotExistError(f"file {os.path.basename(file_path)} not exists.")
             time_tamp = time.time()
             t_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_tamp))
             f_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(os.path.getmtime(file_path))))

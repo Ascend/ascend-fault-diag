@@ -189,7 +189,8 @@ class PlogParser(BMCLogFileParser):
     def parse(self, file_path: str):
         desc = dict()
         if not os.path.isfile(file_path):
-            raise FileNotExistError("file '%s' not exists." % file_path)
+            logger.error(f"file {os.path.basename(file_path)} not exists.")
+            raise FileNotExistError(f"file {os.path.basename(file_path)} not exists.")
         logger.info("start parse %s", file_path)
         with safe_open(file_path, mode='r', encoding='utf-8') as _log:
             lines = _log.readlines()

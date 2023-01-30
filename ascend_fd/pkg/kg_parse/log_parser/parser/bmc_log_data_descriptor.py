@@ -3,7 +3,9 @@
 import json
 import time
 
+from ascend_fd.pkg.kg_parse.utils import logger
 from ascend_fd.tool import safe_open
+from ascend_fd.status import InnerError
 
 
 class UpdateMethodNotSupportedError(RuntimeError):
@@ -122,7 +124,8 @@ class BMCLogDataDescriptor:
             elif name in self.VALID_FLAGS:
                 pass
             else:
-                raise UpdateMethodNotSupportedError("can not find a update method for '%s'." % name)
+                logger.error(f"can not find a update method for {name}.")
+                raise InnerError(f"can not find a update method for {name}.")
 
     # 增加 训练任务异常退出(TheTrainingTaskExitsAbnormally)事件
     def add_atlas_virtual_event(self, event_list: list):
