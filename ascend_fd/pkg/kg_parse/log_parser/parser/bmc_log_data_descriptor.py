@@ -247,7 +247,6 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
 
     def dump_to_json_file(self, file_path: str):
         self.add_atlas_virtual_event(self.ATLAS_EVENT_NAMES)
-        self.add_not_existed_parts(self.ENTITY_PART_NAMES)
         count = 1
         for _, entities in self.data.items():
             self.merge_same_entity(entities)
@@ -255,6 +254,8 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
                 event["serialNo"] = "key%d" % count
                 event["_id"] = "key%d" % count
                 count += 1
+
+        self.add_not_existed_parts(self.ENTITY_PART_NAMES)
         self.is_valid_efficiency()
         with safe_open(file_path, "w", encoding="utf-8") as f_dump:
             f_dump.write(self.__str__())
