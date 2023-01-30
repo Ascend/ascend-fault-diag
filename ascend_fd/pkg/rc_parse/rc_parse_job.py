@@ -16,13 +16,25 @@ PARSE_RULE = {
     "error": "\\[ERROR\\]"
 }
 CATEGORY = ["trace", "event", "error"]
+PID_DEBUG_MAX_PLOG_NUM = 3
+PID_RUN_MAX_PLOG_NUM = 2
 
 
 def start_rc_parse_job(output_path, cfg):
     """
     start root cluster parse job.
     """
-    plog_files = cfg.get("plog_path", None)
+    plog_files_dict = cfg.get("plog_path", None)
+    plog_files = []
+    for plog_list in plog_files_dict.values():
+        debug_plog_heap, run_plog_heap = plog_list
+        if len(debug_plog_heap) > PID_DEBUG_MAX_PLOG_NUM:
+            debug_plog_heap = debug_plog_heap[:1] + debug_plog_heap[-2:]
+        if len(run_plog_heap) > PID_RUN_MAX_PLOG_NUM:
+            run_plog_heap = run_plog_heap[-2:]
+        plog_files.extend(debug_plog_heap)
+        plog_files.extend(run_plog_heap)
+
     if not plog_files:
         rc_logger.error("no plog file that meets the path specifications is found.")
         raise FileNotExistError("no plog file that meets the path specifications is found.")

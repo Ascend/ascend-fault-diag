@@ -5,6 +5,9 @@ from ascend_fd.pkg.kg_parse.utils import logger
 from ascend_fd.pkg.kg_parse.log_parser import SingleJsonFileProcessing
 
 
+PID_MAX_PLOG_NUM = 2
+
+
 def start_kg_parse_job(output_path, files_path_dict):
     """
     execute the knowledge graph parsing task and invoke the knowledge graph parsing code.
@@ -26,8 +29,15 @@ def get_file_list(files_path_dict):
     """
     log_file = dict()
     if files_path_dict.get("plog_path", None):
+        plog_files_dict = files_path_dict.get("plog_path")
+        plog_path = []
+        for plog_list in plog_files_dict.values():
+            for heap in plog_list:
+                if len(heap) > PID_MAX_PLOG_NUM:
+                    heap = heap[-2:]
+                plog_path.extend(heap)
         log_file.update({
-            "plog_path": files_path_dict.get("plog_path")
+            "plog_path": plog_path
         })
     if files_path_dict.get("npu_info_path", None):
         log_file.update({

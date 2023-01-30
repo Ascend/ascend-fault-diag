@@ -2,6 +2,7 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 import os
 import re
+import heapq
 import multiprocessing
 
 from ascend_fd import regular_rule
@@ -23,14 +24,18 @@ class ParseController:
 
     @staticmethod
     def init_config(input_path):
-        plog_path = list()
+        plog_path = dict()
         npu_info_path = list()
         worker_id = ""
         for root, _, files in os.walk(input_path):
             for file in files:
                 file_path = os.path.join(root, file)
-                if re.match(regular_rule.PLOG_ORIGIN_RE, file) and "plog" in root:
-                    plog_path.append(file_path)
+                if re.match(regular_rule.PLOG_ORIGIN_RE, file) and os.path.basename(root) == "plog":
+                    pid = re.match(regular_rule.PLOG_ORIGIN_RE, file)[1]
+                    if os.path.basename(os.path.dirname(root)) == "debug":
+                        heapq.heappush(plog_path.setdefault(pid, [[], []])[0], file_path)
+                    elif os.path.basename(os.path.dirname(root)) == "run":
+                        heapq.heappush(plog_path.setdefault(pid, [[], []])[1], file_path)
                     continue
                 if re.match(regular_rule.NPU_INFO_RE, file) and \
                         re.match(regular_rule.WORKER_DIR_RE, os.path.basename(root)) \
