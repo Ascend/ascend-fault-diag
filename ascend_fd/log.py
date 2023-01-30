@@ -13,17 +13,28 @@ DETAIL_FORMAT = '[%(asctime)s] %(levelname)s [pid:%(process)d] [%(threadName)s] 
 SIMPLE_FORMAT = '[%(levelname)s] > %(message)s'
 
 
+class MyRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    def doRollover(self):
+        try:
+            os.chmod(self.baseFilename, mode=0o440)
+        except PermissionError:
+            os.chmod(f"{self.baseFilename}.{LOG_MAX_BACKUP_COUNT}", mode=0o640)
+        finally:
+            logging.handlers.RotatingFileHandler.doRollover(self)
+            os.chmod(self.baseFilename, mode=0o640)
+
+
 def init_job_logger(output_path, log_name):
     log_path = os.path.join(output_path, "log")
     os.makedirs(log_path, 0o700, exist_ok=True)
     logging_file_path = os.path.join(log_path, f"{log_name}.log")
-    file_handler = logging.handlers.RotatingFileHandler(logging_file_path, maxBytes=LOG_MAX_SIZE,
-                                                        backupCount=LOG_MAX_BACKUP_COUNT)
+    file_handler = MyRotatingFileHandler(logging_file_path, maxBytes=LOG_MAX_SIZE, backupCount=LOG_MAX_BACKUP_COUNT)
     file_handler.setFormatter(logging.Formatter(DETAIL_FORMAT))
 
     logger = logging.getLogger(log_name)
     logger.addHandler(file_handler)
     logger.setLevel(logging.INFO)
+    os.chmod(logging_file_path, 0o640)
 
     return logger
 

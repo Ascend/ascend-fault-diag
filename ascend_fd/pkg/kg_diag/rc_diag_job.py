@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 
 from ascend_fd.status import FileNotExistError, InfoNotFoundError, InfoIncorrectError
-from ascend_fd.tool import safe_open, popen_grep
+from ascend_fd.tool import safe_open, popen_grep, safe_chmod
 from ascend_fd import regular_rule
 
 rc_logger = logging.getLogger("kg_diag.log")
@@ -488,4 +488,5 @@ def start_rc_diag_job(output_path, cfg):
     rc_out_file = os.path.join(output_path, "rc_diag_report.json")
     with safe_open(rc_out_file, 'w+', encoding='utf8') as file_stream:
         file_stream.write(json.dumps(rc_result, ensure_ascii=False, indent=4))
+    safe_chmod(rc_out_file, 0o640)
     return rc_result, worker_list

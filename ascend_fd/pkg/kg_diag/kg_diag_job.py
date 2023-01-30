@@ -8,8 +8,7 @@ import subprocess
 import tarfile
 
 from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError
-from ascend_fd.pkg.kg_diag.rc_diag_job import RCDiagJob
-from ascend_fd.tool import safe_open
+from ascend_fd.tool import safe_open, safe_chmod
 
 
 kg_logger = logging.getLogger("kg_diag.log")
@@ -32,6 +31,7 @@ def start_kg_diag_job(output_path, worker_list, cfg):
     kg_out_file = os.path.join(output_path, "kg_diag_report.json")
     with safe_open(kg_out_file, 'w+', encoding='utf8') as file_stream:
         file_stream.write(json.dumps(kg_result, ensure_ascii=False, indent=4))
+    safe_chmod(kg_out_file, 0o640)
 
     return kg_result
 

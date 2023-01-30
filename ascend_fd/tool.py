@@ -48,6 +48,14 @@ def safe_open(file, *args, **kwargs):
     return file_stream
 
 
+def safe_chmod(file, mode):
+    """
+    safe chmod file.
+    """
+    with safe_open(file) as file_stream:
+        os.fchmod(file_stream.fileno(), mode)
+
+
 def popen_grep(para_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
     cmd_list = ["/usr/bin/grep"] + para_list
     if stdin:

@@ -4,7 +4,7 @@ import json
 import time
 
 from ascend_fd.pkg.kg_parse.utils import logger
-from ascend_fd.tool import safe_open
+from ascend_fd.tool import safe_open, safe_chmod
 from ascend_fd.status import InnerError
 
 
@@ -258,3 +258,4 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
         self.is_valid_efficiency()
         with safe_open(file_path, "w", encoding="utf-8") as f_dump:
             f_dump.write(self.__str__())
+        safe_chmod(file_path, 0o640)

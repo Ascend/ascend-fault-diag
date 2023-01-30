@@ -5,7 +5,7 @@ import os
 import re
 import subprocess
 
-from ascend_fd.tool import verify_file, safe_open
+from ascend_fd.tool import verify_file, safe_open, safe_chmod
 from ascend_fd.status import FileNotExistError, InnerError
 from ascend_fd.regular_rule import PLOG_ORIGIN_RE
 
@@ -49,6 +49,7 @@ def start_rc_parse_job(output_path, cfg):
         for cate in CATEGORY:
             rc_logger.info(f"start grep {cate} information in file {file_name}.")
             get_info_from_file(cate, file, out_file)
+        safe_chmod(out_file, 0o640)
         rc_logger.info(f"the {file_name} parsing result is saved in dir {os.path.basename(output_path)}.")
     rc_logger.info("logs are printed and copied to the specified path.")
 
