@@ -49,7 +49,6 @@ def start_rc_parse_job(output_path, cfg):
         for cate in CATEGORY:
             rc_logger.info(f"start grep {cate} information in file {file_name}.")
             get_info_from_file(cate, file, out_file)
-        safe_chmod(out_file, 0o640)
         rc_logger.info(f"the {file_name} parsing result is saved in dir {os.path.basename(output_path)}.")
     rc_logger.info("logs are printed and copied to the specified path.")
 
@@ -70,3 +69,4 @@ def get_info_from_file(cate, in_file, out_file):
     for line in logs:
         with safe_open(out_file, "a+") as out:
             out.write(line.decode())
+    safe_chmod(out_file, 0o640)
