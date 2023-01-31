@@ -233,8 +233,7 @@ class RCDiagJob:
         self.rank_map = RankMap()
         self.rank_info_parser = RankInfoParser(self.rank_map)
 
-        self.timeouts = {'CONNECT_TIMEOUT': 120, 'Set_connect_time': 0,
-                         'NOTIFY_TIMEOUT': 600, 'Set_notify_time': 0}
+        self.timeouts = {'CONNECT_TIMEOUT': 120, 'NOTIFY_TIMEOUT': 600}
         self.result = {
             "analyze_success": True,
             "engine_ver": "v1.0.0",
@@ -324,7 +323,6 @@ class RCDiagJob:
         get the timeout param from plog files by grep.
         """
         category = ['CONNECT_TIMEOUT', 'NOTIFY_TIMEOUT']
-        operation = ['Set_connect_time', 'Set_notify_time']
         timeout_content = ["HCCL_CONNECT_TIMEOUT is set", "ExecTimeOut is set"]
 
         for index, op in enumerate(timeout_content):
@@ -337,7 +335,6 @@ class RCDiagJob:
                 timeout_re = re.search(regular_rule.TIME_OUT_RE, timeout_log.decode())
                 if timeout_re:
                     self.timeouts.update({category[index]: int(timeout_re[1])})
-                    self.timeouts.update({operation[index]: 1})
                     break
 
     def check_rank_num(self):
@@ -441,7 +438,7 @@ class RCDiagJob:
         cate = ["get socket timeout", "connected p2p timeout"]
         if int(self.timeouts.get('CONNECT_TIMEOUT')) < times:
             reason = f"The cause of this error is '{cate[index]}' due to the fail of Inter-card synchronization. " \
-                     f"Please set a longer timeout period."
+                     f"Now the timeout is {self.timeouts.get('CONNECT_TIMEOUT')}, please set a longer timeout period."
             return reason, UNKNOWN_RANK
         if self.mode == Mode.FORCE_KILL:
             rankids = self.rank_map.no_err_rank if self.rank_map.no_err_rank else self.rank_map.err_rank
@@ -455,8 +452,8 @@ class RCDiagJob:
         check notify timeout reason and rank_id.
         """
         if int(self.timeouts.get('NOTIFY_TIMEOUT')) < times:
-            reason = "The cause of this error is 'notify timeout' due to the fail of Inter-card synchronization. " \
-                     "Please set a longer timeout period."
+            reason = f"The cause of this error is 'notify timeout' due to the fail of Inter-card synchronization. " \
+                     f"Now the timeout is {self.timeouts.get('NOTIFY_TIMEOUT')}, please set a longer timeout period."
             return reason, UNKNOWN_RANK
         if self.mode == Mode.FORCE_KILL:
             if self.rank_map.no_err_rank:
