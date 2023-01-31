@@ -328,7 +328,7 @@ class RCDiagJob:
         timeout_content = ["HCCL_CONNECT_TIMEOUT is set", "ExecTimeOut is set"]
 
         for index, op in enumerate(timeout_content):
-            event_grep = popen_grep([regular_rule.ERROR_HCCL, plog_file])
+            event_grep = popen_grep([regular_rule.EVENT_HCCL, plog_file])
             op_grep = popen_grep([op], stdin=event_grep.stdout)
             timeout_logs = op_grep.stdout.readlines()
             if not timeout_logs:
