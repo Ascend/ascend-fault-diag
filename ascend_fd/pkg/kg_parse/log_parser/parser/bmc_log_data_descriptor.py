@@ -176,7 +176,7 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
         "Dev_os", "Dev_npu", "NPU", "RUNTIME", "GE"
     ]
     ATLAS_EVENT_NAMES = [
-        "RuntimeTaskException","RuntimeAicoreError", "RuntimeModelExecuteTaskFailed",
+        "RuntimeTaskException", "RuntimeAicoreError", "RuntimeModelExecuteTaskFailed",
         "RuntimeAicoreKernelExecuteFailed", "RuntimeStreamSyncFailed", "GEModelStreamSyncFailed", "GERunModelFail"
     ]
     SERVER_BIOS_DICT = {
