@@ -59,12 +59,22 @@ def safe_open(file, *args, **kwargs):
 def safe_chmod(file, mode):
     """
     safe chmod file.
+    :param file: file path
+    :param mode: file mode
     """
     with safe_open(file) as file_stream:
         os.fchmod(file_stream.fileno(), mode)
 
 
 def popen_grep(para_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+    """
+    use subprocess.popen to perform grep operations.
+    :param para_list: grep parameters
+    :param stdin: the popen stdin, default None
+    :param stdout: the popen stdout, default PIPE
+    :param stderr: the popen stderr, default PIPE
+    :return: popen instance
+    """
     cmd_list = ["/usr/bin/grep"] + para_list
     if stdin:
         return subprocess.Popen(cmd_list, shell=False, stdin=stdin, stdout=stdout, stderr=stderr)

@@ -9,6 +9,18 @@ VERSION = "0.3"
 
 
 def command_line():
+    """
+    The command line interface. Commands contain:
+    1. version
+    2. parse
+      -i, --input_path, the input path of origin data file
+      -o, --output_path, the output path of parsed data file
+    3. diag
+      -i, --input_path, the input path of parsed data file
+      -o, --output_path, the output path of diag result file
+      -m, --mode, indicate whether a force-kill scenario is used
+      -p, --print, indicate whether to print the result
+    """
     args = argparse.ArgumentParser(add_help=True, description="Ascend Fault Diag")
     sub_arg = args.add_subparsers(dest="cmd", required=True)
 
@@ -26,10 +38,10 @@ def command_line():
     diag_cmd.add_argument("-o", "--output_path", type=str, required=True,
                           help="the output path of diag result file")
     diag_cmd.add_argument("-m", "--mode", type=int, default=0, choices=[0, 1],
-                          help="Indicates whether a force-kill scenario is used. "
+                          help="indicate whether a force-kill scenario is used. "
                                "0: force-kill, 1: not force-kill. default 0.")
     diag_cmd.add_argument("-p", "--print", action="store_true",
-                          help="Indicate whether to print the result. "
+                          help="indicate whether to print the result. "
                                "If no parameter is specified, the result is not printed.")
 
     return args.parse_args()

@@ -29,6 +29,16 @@ class ParseController:
 
     @staticmethod
     def init_config(input_path):
+        """
+        init parse config. The config dict contains three parts:
+        {
+        plog_path: {PID: [[], []]}, (each PID corresponds to two lists of plogs--debug folder and run folder)
+        npu_info_path: [],
+        worker_id: "",
+        }
+        :param input_path: the origin log data path
+        :return: parse config dict
+        """
         plog_path = dict()
         npu_info_path = list()
         worker_id = ""
@@ -60,16 +70,18 @@ class ParseController:
 
     def start_job(self):
         """
-        start the parse log job
+        use multiprocessing to start parse tasks.
+        Now the component contains two parse tasks:
+        1. RC parse job; 2. KG parse job.
         """
         self.logger.info("Start the log-parse job.".center(LOG_WIDTH, "-"))
         pool = multiprocessing.Pool(len(self.PARSE_CATEGORY))
         for name in self.PARSE_CATEGORY:
-            pool.apply_async(self.parsers.get(name).work(), callback=self.log_callback)
+            pool.apply_async(self.parsers.get(name).work, callback=self.log_callback)
         pool.close()
 
-        # The knowledge graph uses multiprocess parsing. Therefore, only the main process can be used to
-        # start the knowledge graph parse task. The child process cannot be started new child process.
+        # The knowledge graph uses multiprocess parsing. But the child process cannot be started new child process.
+        # So only the main process can be used to start the knowledge graph parse task.
         self.log_callback(self.parsers.get("Kg").work())
 
         pool.join()
@@ -77,7 +89,8 @@ class ParseController:
 
     def log_callback(self, result):
         """
-        log callback func
+        receive the execution results of child processes and print logs.
+        :param result: the result of subprocess
         """
         err, job_name, _ = result
         if isinstance(err, BaseError):
@@ -87,7 +100,8 @@ class ParseController:
 
     def generate_parser(self):
         """
-        generate parsers
+        generate two parsers.
+        :return: parser dict
         """
         parsers = dict()
         parsers["Rc"] = RcParser(self.input_path, self.output_path, self.cfg)
@@ -97,7 +111,9 @@ class ParseController:
     def generate_output_path(self, output_path):
         """
         generate the output_path.
-        final output path: <pararm_output_path>/fault_diag_data/worker-{id}/
+        The parse job have a format output path:<pararm_output_path>/fault_diag_data/worker-{id}/
+        :param output_path: the specified output path
+        :return: the final output dir path
         """
         worker_id = self.cfg.get("worker_id", None)
         if not worker_id:
@@ -130,6 +146,22 @@ class DiagController:
 
     @staticmethod
     def init_cfg(input_path, mode):
+        """
+        init diag config. The config dict contains two parts:
+        {
+        mode: "0/1",
+        parse_data:
+            {worker_id:
+                {
+                plog_parser_path: [],
+                kg_parse_path: "",
+                },
+            },
+        }
+        :param input_path: the parsed log data path
+        :param mode: scene mode
+        :return: diag config dict
+        """
         parse_data = dict()
         worker_dirs = os.listdir(input_path)
         for worker_dir in worker_dirs:
@@ -162,12 +194,14 @@ class DiagController:
 
     def start_job(self):
         """
-        start the falt-diag job
+        use multiprocessing to start diag tasks.
+        Now the component contains one diag task:
+        1. KG parse job.
         """
         self.logger.info("Start the falt-diag job.".center(LOG_WIDTH, "-"))
         pool = multiprocessing.Pool(len(self.diag_task))
         for name in self.diag_task:
-            pool.apply_async(self.diagnosers.get(name).work(), callback=self.log_callback)
+            pool.apply_async(self.diagnosers.get(name).work, callback=self.log_callback)
         pool.close()
         pool.join()
         self.logger.info("The falt-diag job is complete.".center(LOG_WIDTH, "-"))
@@ -175,6 +209,10 @@ class DiagController:
         self.export_results()
 
     def export_results(self):
+        """
+        sort the diagnostic results and save results to output path.
+        If print parameter is true, func will print the results.
+        """
         out_file = os.path.join(self.output_path, "all_diag_report.json")
         save_result = {
             "Ascend-RC-Worker-Rank-Analyze Result":
@@ -189,6 +227,10 @@ class DiagController:
             self.logger.info(json.dumps(save_result, ensure_ascii=False, indent=4))
 
     def log_callback(self, result):
+        """
+        receive the execution results of child processes and print logs.
+        :param result: the result of subprocess
+        """
         err, job_name, result_json = result
         if isinstance(err, BaseError):
             self.logger.error(f"{job_name} diag job failed. {err}")
@@ -198,7 +240,8 @@ class DiagController:
 
     def generate_diagnoser(self):
         """
-        generate 3 diagnosers
+        generate one diagnoser.
+        :return: parser dict
         """
         diagnoser = dict()
         diagnoser["Kg"] = KgDiagnoser(self.input_path, self.output_path, self.cfg)

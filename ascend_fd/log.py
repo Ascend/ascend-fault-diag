@@ -14,6 +14,9 @@ SIMPLE_FORMAT = '[%(levelname)s] > %(message)s'
 
 
 class MyRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """
+    This class is used to control logs permissions.
+    """
     def doRollover(self):
         try:
             os.chmod(self.baseFilename, mode=0o440)
@@ -25,6 +28,12 @@ class MyRotatingFileHandler(logging.handlers.RotatingFileHandler):
 
 
 def init_job_logger(output_path, log_name):
+    """
+    init a file logger by output path and log name.
+    :param output_path: the log path
+    :param log_name: the logger name
+    :return: logger
+    """
     log_path = os.path.join(output_path, "log")
     os.makedirs(log_path, 0o700, exist_ok=True)
     logging_file_path = os.path.join(log_path, f"{log_name}.log")
@@ -40,6 +49,11 @@ def init_job_logger(output_path, log_name):
 
 
 def init_main_logger(output_path):
+    """
+    init the main logger. It contains two handlers: 1. RotatingFileHandler; 2. StreamHandler.
+    :param output_path: the log path
+    :return: logger
+    """
     logger = init_job_logger(output_path, "ascend_fd")
 
     stream_handler = logging.StreamHandler()
