@@ -48,3 +48,11 @@ def init_main_logger(output_path):
     logger.addHandler(stream_handler)
 
     return logger
+
+
+# echo use to print version and err info when the main logger not init.
+_echo_handler = logging.StreamHandler()
+_echo_handler.setFormatter(logging.Formatter('%(message)s'))
+echo = logging.getLogger("echo")
+echo.addHandler(_echo_handler)
+echo.setLevel(logging.INFO)

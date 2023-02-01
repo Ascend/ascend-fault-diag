@@ -2,27 +2,10 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 import argparse
 
-from ascend_fd.parse.controller import ParseController
-from ascend_fd.diag.controller import DiagController
-from ascend_fd.tool import path_check
+from ascend_fd.log import echo
+from ascend_fd.controller import router
 
 VERSION = "0.3"
-
-
-def version(args):
-    print(f"ascend-fd v{VERSION}")
-
-
-def parse(args):
-    args.input_path, args.output_path = path_check(args.input_path, args.output_path)
-    controller = ParseController(args)
-    controller.start_job()
-
-
-def diag(args):
-    args.input_path, args.output_path = path_check(args.input_path, args.output_path)
-    controller = DiagController(args)
-    controller.start_job()
 
 
 def command_line():
@@ -41,7 +24,7 @@ def command_line():
     diag_cmd.add_argument("-i", "--input_path", type=str, required=True,
                           help="the input path of parsed data file")
     diag_cmd.add_argument("-o", "--output_path", type=str, required=True,
-                          help="the output path of result file")
+                          help="the output path of diag result file")
     diag_cmd.add_argument("-m", "--mode", type=int, default=0, choices=[0, 1],
                           help="Indicates whether a force-kill scenario is used. "
                                "0: force-kill, 1: not force-kill. default 0.")
@@ -52,11 +35,13 @@ def command_line():
     return args.parse_args()
 
 
+def show_version():
+    echo.info(f"ascend-fd v{VERSION}")
+
+
 def main():
-    func_map = {
-        "version": version,
-        "parse": parse,
-        "diag": diag
-    }
     args = command_line()
-    func_map.get(args.cmd)(args)
+    if args.cmd == "version":
+        show_version()
+        return
+    router(args)

@@ -13,7 +13,10 @@ GB_SHIFT = 30
 
 def path_check(input_path, output_path):
     """
-    check whether the path exists.
+    check if the path exists.
+    :param input_path: the input data path.
+    :param output_path: the output data path.
+    :return: (input_real_path, output_real_path)
     """
     input_path = os.path.realpath(input_path)
     if not os.path.exists(input_path):
@@ -27,6 +30,7 @@ def path_check(input_path, output_path):
 def verify_file(file):
     """
     check whether the file has at least the read permission.
+    :param file: file path.
     """
     if int(oct(os.stat(file).st_mode)[-3:]) < 400:
         raise FileOpenError("failed to parse log due to insufficient permission.")
@@ -34,7 +38,11 @@ def verify_file(file):
 
 def safe_open(file, *args, **kwargs):
     """
-    safe open file.
+    safe open file. Function will check if the file is a soft link or the file size is too large.
+    :param file: file path.
+    :param args: the open function parameters.
+    :param kwargs: the open function parameters.
+    :return: file_stream
     """
     file_real_path = os.path.realpath(file)
     file_stream = open(file_real_path, *args, **kwargs)
