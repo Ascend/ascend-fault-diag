@@ -76,6 +76,7 @@ class LineParser:
             return False
         return True
 
+
 class PlogParser(BMCLogFileParser):
     """根据提供的正则表达式对文件每行数据进行解析及数据提取"""
     """parm_regex， parm_dict_func 以文件路径作为输入获取device id；parm_regex1，parm_dict_func1以文本中参数匹配获取module"""

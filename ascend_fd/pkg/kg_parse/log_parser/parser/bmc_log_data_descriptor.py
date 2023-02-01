@@ -48,20 +48,10 @@ class BMCLogDataDescriptor:
     def update_events(self, desc):
         pass
 
-    def update_parts(self, desc):
-        pass
-
-    def update_time(self, desc):
-        pass
-
     def update(self, desc: dict):
         for name, val in desc.items():
             if name == "events":
                 self.update_events(val)
-            elif name == "parts":
-                self.update_parts(val)
-            elif name == "time":
-                self.update_time(val)
             elif name in self.VALID_FLAGS:
                 pass
             else:
@@ -215,18 +205,6 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
             event["alarmLevel"] = "重要"
             key_name = "%s_list" % item.get("event_type")
             self.data.setdefault(key_name, []).append(event)
-
-    def update_parts(self, desc):
-        for key, parts in desc.items():
-            if key in ["CustomPowerPolicy", "BIOS", "product_name"]:
-                self.efficiency_valid_param[key] = desc[key]
-                continue
-            if key in self.ENTITY_PART_NAMES:
-                for part in parts:
-                    part["name"] = key
-                    part["typeName"] = key
-                    key_name = "%s_list" % key
-                    self.data.setdefault(key_name, []).append(part)
 
     def is_valid_efficiency(self):
         if "Efficiency_list" in self.data:
