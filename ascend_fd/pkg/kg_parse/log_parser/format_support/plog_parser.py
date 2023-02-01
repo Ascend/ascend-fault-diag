@@ -66,9 +66,15 @@ class LineParser:
             return True
         return False
 
-    def get_keywords(self):
-        return self.keywords
-
+    def line_check(self, line):
+        keyword_num = 0
+        for keyword in self.keywords:
+            if keyword not in line:
+                break
+            keyword_num += 1
+        if keyword_num != len(self.keywords):
+            return False
+        return True
 
 class PlogParser(BMCLogFileParser):
     """根据提供的正则表达式对文件每行数据进行解析及数据提取"""
@@ -230,7 +236,6 @@ class PlogParser(BMCLogFileParser):
         for line_parser in self.LINE_PARSERS:
             if not line_parser.file_check(file_path):
                 continue
-            keywords = line_parser.get_keywords()
             for index, line in enumerate(lines):
                 if matched[index] == 1:
                     continue
@@ -238,12 +243,7 @@ class PlogParser(BMCLogFileParser):
                 """ts.txt可能存在\00字符，导致循环无法退出"""
                 line = line.replace('\00', '')
 
-                keyword_num = 0
-                for keyword in keywords:
-                    if keyword not in line:
-                        break
-                    keyword_num += 1
-                if keyword_num != len(keywords):
+                if not line_parser.line_check(line):
                     continue
 
                 event_dict = line_parser.parse(line, file_path)

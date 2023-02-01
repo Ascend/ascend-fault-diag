@@ -16,7 +16,6 @@ class BMCLogDataDescriptor:
     def __init__(self):
         self.data = dict()
         self.efficiency_valid_param = dict()
-        self.disk_command_timeout_param = dict()
 
     def __str__(self):
         return json.dumps(self.data, sort_keys=False, indent=4, separators=(',', ':'), ensure_ascii=False)
