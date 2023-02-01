@@ -3,9 +3,8 @@
 import logging
 import os
 import re
-import subprocess
 
-from ascend_fd.tool import verify_file, safe_open, safe_chmod, popen_grep
+from ascend_fd.tool import safe_open, safe_chmod, popen_grep
 from ascend_fd.status import FileNotExistError, InnerError
 from ascend_fd.regular_rule import PLOG_ORIGIN_RE
 
