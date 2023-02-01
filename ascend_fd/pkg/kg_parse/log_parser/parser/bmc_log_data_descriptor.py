@@ -168,18 +168,6 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
         "RuntimeTaskException", "RuntimeAicoreError", "RuntimeModelExecuteTaskFailed",
         "RuntimeAicoreKernelExecuteFailed", "RuntimeStreamSyncFailed", "GEModelStreamSyncFailed", "GERunModelFail"
     ]
-    SERVER_BIOS_DICT = {
-        "RH1288 V3": "5.13",
-        "RH2288 V3": "5.13",
-        "RH2288H V3": "5.13",
-        "5288 V3": "5.13",
-        "RH5885 V3": "8.28",
-        "RH5885H V3": "8.28",
-        "RH8100 V3": "8.28",
-        "1288H V5": "0.81",
-        "2288H V5": "0.81",
-        "5288 V5": "0.81",
-    }
 
     def __init__(self):
         super().__init__()
@@ -206,22 +194,6 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
             key_name = "%s_list" % item.get("event_type")
             self.data.setdefault(key_name, []).append(event)
 
-    def is_valid_efficiency(self):
-        if "Efficiency_list" in self.data:
-            if "CustomPowerPolicy" in self.efficiency_valid_param:
-                c_key = self.data.get("Efficiency_list")[0].get("value", None)
-                c_value = self.efficiency_valid_param.get("CustomPowerPolicy").get(c_key, None)
-                if c_value != "Efficiency":
-                    del self.data["Efficiency_list"]
-                    return
-            if "BIOS" in self.efficiency_valid_param and "product_name" in self.efficiency_valid_param:
-                bios_version = self.efficiency_valid_param.get("BIOS").get("version", None)
-                product_name = self.efficiency_valid_param.get("product_name").get("version", None)
-                std_bios_version = self.SERVER_BIOS_DICT.get(product_name, None)
-                if not std_bios_version or (float(bios_version) >= float(std_bios_version)):
-                    del self.data["Efficiency_list"]
-                    return
-
     def dump_to_json_file(self, file_path: str):
         self.add_atlas_virtual_event(self.ATLAS_EVENT_NAMES)
         count = 1
@@ -231,9 +203,7 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
                 event["serialNo"] = "key%d" % count
                 event["_id"] = "key%d" % count
                 count += 1
-
         self.add_not_existed_parts(self.ENTITY_PART_NAMES)
-        self.is_valid_efficiency()
         with safe_open(file_path, "w", encoding="utf-8") as f_dump:
             f_dump.write(self.__str__())
         safe_chmod(file_path, 0o640)
