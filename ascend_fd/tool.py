@@ -27,15 +27,6 @@ def path_check(input_path, output_path):
     return input_path, output_path
 
 
-def verify_file(file):
-    """
-    check whether the file has at least the read permission.
-    :param file: file path.
-    """
-    if int(oct(os.stat(file).st_mode)[-3:]) < 400:
-        raise FileOpenError("failed to parse log due to insufficient permission.")
-
-
 def safe_open(file, *args, **kwargs):
     """
     safe open file. Function will check if the file is a soft link or the file size is too large.
@@ -66,16 +57,21 @@ def safe_chmod(file, mode):
         os.fchmod(file_stream.fileno(), mode)
 
 
-def popen_grep(para_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+def popen_grep(rule, file, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
     """
     use subprocess.popen to perform grep operations.
-    :param para_list: grep parameters
+    :param rule: grep rule
+    :param file: the file
     :param stdin: the popen stdin, default None
     :param stdout: the popen stdout, default PIPE
     :param stderr: the popen stderr, default PIPE
     :return: popen instance
     """
-    cmd_list = ["/usr/bin/grep"] + para_list
+    cmd_list = ["/usr/bin/grep"]
     if stdin:
+        cmd_list.append(rule)
         return subprocess.Popen(cmd_list, shell=False, stdin=stdin, stdout=stdout, stderr=stderr)
+
+    with safe_open(file):
+        cmd_list.extend([rule, file])
     return subprocess.Popen(cmd_list, shell=False, stdout=stdout, stderr=stderr)

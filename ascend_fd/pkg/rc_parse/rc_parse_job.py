@@ -5,9 +5,10 @@ import os
 import re
 import subprocess
 
-from ascend_fd.tool import verify_file, safe_open, safe_chmod
+from ascend_fd.tool import verify_file, safe_open, safe_chmod, popen_grep
 from ascend_fd.status import FileNotExistError, InnerError
 from ascend_fd.regular_rule import PLOG_ORIGIN_RE
+
 
 rc_logger = logging.getLogger("rc_parse.log")
 PARSE_RULE = {
@@ -22,7 +23,9 @@ PID_RUN_MAX_PLOG_NUM = 2
 
 def start_rc_parse_job(output_path, cfg):
     """
-    start root cluster parse job.
+    start rc parse job.
+    :param output_path: the parsed data output path
+    :param cfg: parse config
     """
     plog_files_dict = cfg.get("plog_path", None)
     plog_files = []
@@ -39,7 +42,6 @@ def start_rc_parse_job(output_path, cfg):
         rc_logger.error("no plog file that meets the path specifications is found.")
         raise FileNotExistError("no plog file that meets the path specifications is found.")
     for file in plog_files:
-        verify_file(file)
         file_name = os.path.basename(file)
         pid_re = re.match(PLOG_ORIGIN_RE, file_name)
         if not pid_re:
@@ -55,14 +57,16 @@ def start_rc_parse_job(output_path, cfg):
 
 def get_info_from_file(cate, in_file, out_file):
     """
-    obtain info from the plog files by grep.
+    use grep to filter the corresponding content from origin plog file.
+    :param cate: grep rule
+    :param in_file: the filtered file
+    :param out_file: the output file
     """
     rule = PARSE_RULE.get(cate, None)
     if not rule:
         rc_logger.error(f"{cate} doesn't exist in PARSE_RULE")
         raise InnerError(f"{cate} doesn't exist in PARSE_RULE")
-    grep = subprocess.Popen(["/usr/bin/grep", rule, in_file],
-                            shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    grep = popen_grep(rule, in_file)
     logs = grep.stdout.readlines()
     if not logs:
         return

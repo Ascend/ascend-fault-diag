@@ -89,14 +89,14 @@ class RankInfoParser:
         get rank info (rank num, rank id, server id and device id) from plog files by grep.
         """
         rc_logger.info(f"get the rank info from plog file {os.path.basename(plog_file)} by grep trace log.")
-        trace_grep = popen_grep([regular_rule.TRACE_HCCL, plog_file])
-        rank_grep = popen_grep([regular_rule.RANK_INFO], stdin=trace_grep.stdout)
+        trace_grep = popen_grep(regular_rule.TRACE_HCCL, plog_file)
+        rank_grep = popen_grep(regular_rule.RANK_INFO, None, stdin=trace_grep.stdout)
         rank_logs = rank_grep.stdout.readlines()
         if not rank_logs:
             rc_logger.info(f"cannot get rank info by grep trace log. "
                            f"Get the rank info from plog file {os.path.basename(plog_file)} by grep error log.")
-            error_grep = popen_grep([regular_rule.ERROR_HCCL, plog_file])
-            rank_grep = popen_grep([regular_rule.RANK_INFO], stdin=error_grep.stdout)
+            error_grep = popen_grep(regular_rule.ERROR_HCCL, plog_file)
+            rank_grep = popen_grep(regular_rule.RANK_INFO, None, stdin=error_grep.stdout)
             rank_logs = rank_grep.stdout.readlines()
             if not rank_logs:
                 return False, []
@@ -178,7 +178,7 @@ class RankInfoParser:
         """
         rank_err_content = list()
         for rank_id, plog_file in self.rank_plog_map.items():
-            err_grep = popen_grep([regular_rule.ERROR, plog_file])
+            err_grep = popen_grep(regular_rule.ERROR, plog_file)
             error_logs = err_grep.stdout.readlines()
             if not error_logs:
                 self.rank_map.add_no_err_rank(rank_id)
@@ -198,7 +198,7 @@ class RankInfoParser:
         heartbeat_relation = dict()
         flag = False
         for plog_file in self.rank_plog_map.values():
-            heartbeat_grep = popen_grep([regular_rule.HEARTBEAT_INFO, plog_file])
+            heartbeat_grep = popen_grep(regular_rule.HEARTBEAT_INFO, plog_file)
             heartbeat_logs = heartbeat_grep.stdout.readlines()
             if not heartbeat_logs:
                 continue
@@ -326,8 +326,8 @@ class RCDiagJob:
         timeout_content = ["HCCL_CONNECT_TIMEOUT is set", "ExecTimeOut is set"]
 
         for index, op in enumerate(timeout_content):
-            event_grep = popen_grep([regular_rule.EVENT_HCCL, plog_file])
-            op_grep = popen_grep([op], stdin=event_grep.stdout)
+            event_grep = popen_grep(regular_rule.EVENT_HCCL, plog_file)
+            op_grep = popen_grep(op, None, stdin=event_grep.stdout)
             timeout_logs = op_grep.stdout.readlines()
             if not timeout_logs:
                 continue
