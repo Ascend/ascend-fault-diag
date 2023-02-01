@@ -79,7 +79,7 @@ class ParseController:
         """
         log callback func
         """
-        err, job_name = result
+        err, job_name, _ = result
         if isinstance(err, BaseError):
             self.logger.error(f"{job_name} parse job failed. {err}")
             return
