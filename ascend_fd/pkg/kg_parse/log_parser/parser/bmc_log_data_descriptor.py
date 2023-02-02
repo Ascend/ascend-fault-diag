@@ -15,7 +15,6 @@ class BMCLogDataDescriptor:
 
     def __init__(self):
         self.data = dict()
-        self.efficiency_valid_param = dict()
 
     def __str__(self):
         return json.dumps(self.data, sort_keys=False, indent=4, separators=(',', ':'), ensure_ascii=False)
@@ -87,41 +86,6 @@ class BMCLogDataDescriptor:
             event_dict["alarmLevel"] = "重要"
             self.data.setdefault(key_name, []).append(event_dict)
 
-    def add_not_existed_parts(self, part_list: list):
-        for entity_name in part_list:
-            entity_keyname = "%s_list" % entity_name
-            if entity_keyname not in self.data:
-                entity_dict = dict()
-                if entity_keyname == "OS_list":
-                    entity_dict["type"] = "OS"
-                if entity_keyname == "NPU_list":
-                    entity_dict["board_id"] = "Board1-Board2"
-                    entity_dict["npu_id"] = "NPU1-NPU8"
-                    entity_dict["name"] = entity_name
-                    entity_dict["typeName"] = entity_name
-                    self.data.setdefault(entity_keyname, []).append(entity_dict)
-                    continue
-                if entity_keyname == "Dev_os_list":
-                    for dev_os_id in ["dev-os-7", "dev-os-3"]:
-                        entity_dict = dict()
-                        entity_dict["dev_os_id"] = dev_os_id
-                        entity_dict["name"] = entity_name
-                        entity_dict["typeName"] = entity_name
-                        self.data.setdefault(entity_keyname, []).append(entity_dict)
-                    continue
-                if entity_keyname == "Dev_npu_list":
-                    for numth in range(8):
-                        entity_dict = dict()
-                        entity_dict["device_id"] = "device-%d" % numth
-                        entity_dict["name"] = entity_name
-                        entity_dict["typeName"] = entity_name
-                        self.data.setdefault(entity_keyname, []).append(entity_dict)
-                    continue
-                entity_dict["version"] = "V1.0"
-                entity_dict["name"] = entity_name
-                entity_dict["typeName"] = entity_name
-                self.data.setdefault(entity_keyname, []).append(entity_dict)
-
     def merge_same_entity(self, entities):
         entities.sort(key=lambda x: x["RaiseTime"])
         now_length = len(entities)
@@ -155,15 +119,6 @@ class BMCLogDataDescriptor:
 
 
 class DataDescriptorOfNAIE(BMCLogDataDescriptor):
-    ENTITY_PART_NAMES = [
-        "OS", "BMC", "BIOS",
-        "CPU", "DIMM", "RaidCard",
-        "RiserModule", "Disk", "HddBackPlane",
-        "PCIE", "VideoCard", "Power",
-        "Fan", "MainBoard", "PC_HBA", "Disk",
-        "Host", "Device_os", "Device", "Hccn_tool",
-        "Dev_os", "Dev_npu", "NPU", "RUNTIME", "GE"
-    ]
     ATLAS_EVENT_NAMES = [
         "RuntimeTaskException", "RuntimeAicoreError", "RuntimeModelExecuteTaskFailed",
         "RuntimeAicoreKernelExecuteFailed", "RuntimeStreamSyncFailed", "GEModelStreamSyncFailed", "GERunModelFail"
@@ -203,7 +158,6 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
                 event["serialNo"] = "key%d" % count
                 event["_id"] = "key%d" % count
                 count += 1
-        self.add_not_existed_parts(self.ENTITY_PART_NAMES)
         with safe_open(file_path, "w", encoding="utf-8") as f_dump:
             f_dump.write(self.__str__())
         safe_chmod(file_path, 0o640)
