@@ -27,7 +27,7 @@ def start_rc_parse_job(output_path, cfg):
     :param cfg: parse config
     """
     plog_files_dict = cfg.get("plog_path", None)
-    plog_files = []
+    plog_files = list()
     for plog_list in plog_files_dict.values():
         debug_plog_heap, run_plog_heap = plog_list
         if len(debug_plog_heap) > PID_DEBUG_MAX_PLOG_NUM:
@@ -40,6 +40,8 @@ def start_rc_parse_job(output_path, cfg):
     if not plog_files:
         rc_logger.error("no plog file that meets the path specifications is found.")
         raise FileNotExistError("no plog file that meets the path specifications is found.")
+
+    pid_err_flag = dict()
     for file in plog_files:
         file_name = os.path.basename(file)
         pid_re = re.match(PLOG_ORIGIN_RE, file_name)
@@ -47,10 +49,27 @@ def start_rc_parse_job(output_path, cfg):
             continue
         pid = pid_re[1]
         out_file = os.path.join(output_path, f"plog-parser-{pid}.log")
+
+        is_write = False
         for cate in CATEGORY:
             rc_logger.info(f"start grep {cate} information in file {file_name}.")
-            get_info_from_file(cate, file, out_file)
-        rc_logger.info(f"the {file_name} parsing result is saved in dir {os.path.basename(output_path)}.")
+            is_write, is_error = get_info_from_file(cate, file, out_file)
+            if is_error:
+                pid_err_flag.update({pid: (out_file, True)})
+            if is_write:
+                pid_err_flag.update({pid: (out_file, False)})
+        if is_write:
+            rc_logger.info(f"the {file_name} parsing result is saved in dir {os.path.basename(output_path)}.")
+        else:
+            rc_logger.info(f"the {file_name} does not have effective results.")
+
+    for key, values in pid_err_flag:
+        if values[1]:
+            new_name = os.path.join(output_path, f"plog-parser-{key}-1.log")
+        else:
+            new_name = os.path.join(output_path, f"plog-parser-{key}-0.log")
+        os.rename(values[0], new_name)
+        safe_chmod(new_name, 0o640)
     rc_logger.info("logs are printed and copied to the specified path.")
 
 
@@ -61,6 +80,8 @@ def get_info_from_file(cate, in_file, out_file):
     :param in_file: the filtered file
     :param out_file: the output file
     """
+    is_write = False
+    is_error = False
     rule = PARSE_RULE.get(cate, None)
     if not rule:
         rc_logger.error(f"{cate} doesn't exist in PARSE_RULE")
@@ -68,8 +89,12 @@ def get_info_from_file(cate, in_file, out_file):
     grep = popen_grep(rule, in_file)
     logs = grep.stdout.readlines()
     if not logs:
-        return
+        return is_write, is_error
     for line in logs:
+        is_write = True
         with safe_open(out_file, "a+") as out:
             out.write(line.decode())
-    safe_chmod(out_file, 0o640)
+    if cate == "error":
+        is_error = True
+
+    return is_write, is_error
