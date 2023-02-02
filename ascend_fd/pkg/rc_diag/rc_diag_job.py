@@ -179,7 +179,7 @@ class RCDiagWorker:
             for timeout_log in timeout_logs:
                 timeout_re = re.search(regular_rule.TIME_OUT_RE, timeout_log.decode())
                 if timeout_re:
-                    self.rank_table.update_timeout({category[index]: int(timeout_re[1])})
+                    self.rank_table.update_timeout(category[index], int(timeout_re[1]))
                     break
 
     def add_plog_path(self, worker_id, plog_file):
@@ -192,7 +192,7 @@ class RCDiagWorker:
             raise InfoIncorrectError(f"the plog file name {os.path.basename(plog_file)} is incorrect. "
                                      f"Please check input plog file.")
         pid = pid_re[1]
-        is_error = pid_re[2]
+        is_error = True if pid_re[2] == "1" else False
 
         is_ok, rank_info_list = self.get_rank_info_from_plog(plog_file)
         if not is_ok:

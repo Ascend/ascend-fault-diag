@@ -11,7 +11,7 @@ from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError
 from ascend_fd.tool import safe_open, safe_chmod
 
 
-kg_logger = logging.getLogger("kg_diag.log")
+kg_logger = logging.getLogger("kg_diag")
 PWD_PATH = os.path.dirname(os.path.realpath(__file__))
 KG_JAR_PATH = os.path.join(PWD_PATH, "kginfer.jar")
 KG_REPO = os.path.join(PWD_PATH, "knowledge-repository")

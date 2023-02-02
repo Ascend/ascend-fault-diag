@@ -33,9 +33,9 @@ class BaseChecker:
         self.rank_table = rank_table
 
     def __str__(self):
-        return f"{self.name}: {self.description}. " \
+        return f"{self.name}: {self.description} " \
                f"Root cause rank(s) is/are: {str(self.root_rank_ids)}. " \
-               f"Solution: {self.solution}."
+               f"Solution: {self.solution}"
 
     def get_root_worker_set(self):
         rank_ids = self.root_rank_ids
@@ -46,26 +46,26 @@ class BaseChecker:
         if isinstance(rank_ids, str):
             worker_id = self.rank_table.get_worker_from_rank(rank_ids)
             if worker_id == -1:
-                return worker_set
+                return rank_ids, worker_set
             worker_set.add(worker_id)
-            return worker_set
+            return rank_ids, worker_set
         if isinstance(rank_ids, (list, set)):
             rank_list = list(rank_ids)[:self.MAX_WORKER_NUM]
             for single_rank in rank_list:
                 worker_id = self.rank_table.get_worker_from_rank(single_rank)
                 if worker_id != -1:
                     worker_set.add(worker_id)
-        return worker_set
+        return rank_ids, worker_set
 
     def check(self, plog_map, mode):
         pass
 
     def format_output(self):
-        worker_set = self.get_root_worker_set()
+        rank_ids, worker_set = self.get_root_worker_set()
         self.result["root_cause_worker"] = list(worker_set)
-        self.result["root_cause_rank"] = list(self.root_rank_ids)
+        self.result["root_cause_rank"] = list(rank_ids)
         self.result["root_cause_description"] = self.__str__()
-        return self.result, list(self.root_rank_ids)
+        return self.result, list(worker_set)
 
 
 class AllRankNoErrChecker(BaseChecker):
@@ -162,7 +162,7 @@ class ErrorInfoChecker(BaseChecker):
         if first_rank_content.get('Hccl_count', 0) == 0:
             self.name = "Unknown error"
             self.description = "The first rank to report the error does not contain HCCL errors. " \
-                               "This component only supports HCCL error detection"
+                               "This component only supports HCCL error detection."
             self.root_rank_ids = UNKNOWN_RANK
             return
 
@@ -240,11 +240,11 @@ class ErrorInfoChecker(BaseChecker):
         if mode == Mode.FORCE_KILL:
             if self.rank_table.no_err_rank:
                 self.description = f"The cause of this error is '{err_cate[reason_index]}'. " \
-                                   f"Maybe the {self.rank_table.no_err_rank} is/are too slow or core dump"
+                                   f"Maybe the {self.rank_table.no_err_rank} is/are too slow or core dump."
                 self.root_rank_ids = self.rank_table.no_err_rank
                 return
-            self.description = "The cause of this error is '{err_cate[reason_index]}', " \
-                               "Timeout is reported for all ranks."
+            self.description = f"The cause of this error is '{err_cate[reason_index]}', " \
+                               f"Timeout is reported for all ranks."
             self.root_rank_ids = self.rank_table.err_rank
             return
 

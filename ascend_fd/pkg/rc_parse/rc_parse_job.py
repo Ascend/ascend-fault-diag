@@ -9,7 +9,7 @@ from ascend_fd.status import FileNotExistError, InnerError
 from ascend_fd.regular_rule import PLOG_ORIGIN_RE
 
 
-rc_logger = logging.getLogger("rc_parse.log")
+rc_logger = logging.getLogger("rc_parse")
 PARSE_RULE = {
     "trace": "\\[TRACE\\] HCCL",
     "event": "\\[EVENT\\] HCCL",
@@ -41,7 +41,8 @@ def start_rc_parse_job(output_path, cfg):
         rc_logger.error("no plog file that meets the path specifications is found.")
         raise FileNotExistError("no plog file that meets the path specifications is found.")
 
-    pid_err_flag = dict()
+    pid_write_flag = dict()
+    pid_error_flag = dict()
     for file in plog_files:
         file_name = os.path.basename(file)
         pid_re = re.match(PLOG_ORIGIN_RE, file_name)
@@ -54,22 +55,22 @@ def start_rc_parse_job(output_path, cfg):
         for cate in CATEGORY:
             rc_logger.info(f"start grep {cate} information in file {file_name}.")
             is_write, is_error = get_info_from_file(cate, file, out_file)
-            if is_error:
-                pid_err_flag.update({pid: (out_file, True)})
             if is_write:
-                pid_err_flag.update({pid: (out_file, False)})
+                pid_write_flag.update({pid: out_file})
+            if is_error:
+                pid_error_flag.update({pid: pid_error_flag.get(pid, 0) + 1})
         if is_write:
             rc_logger.info(f"the {file_name} parsing result is saved in dir {os.path.basename(output_path)}.")
         else:
             rc_logger.info(f"the {file_name} does not have effective results.")
 
-    for key, values in pid_err_flag:
-        if values[1]:
-            new_name = os.path.join(output_path, f"plog-parser-{key}-1.log")
+    for key, src_file in pid_write_flag.items():
+        if pid_error_flag.get(key, 0) > 0:
+            dst_file = os.path.join(output_path, f"plog-parser-{key}-1.log")
         else:
-            new_name = os.path.join(output_path, f"plog-parser-{key}-0.log")
-        os.rename(values[0], new_name)
-        safe_chmod(new_name, 0o640)
+            dst_file = os.path.join(output_path, f"plog-parser-{key}-0.log")
+        os.rename(src_file, dst_file)
+        safe_chmod(dst_file, 0o640)
     rc_logger.info("logs are printed and copied to the specified path.")
 
 
