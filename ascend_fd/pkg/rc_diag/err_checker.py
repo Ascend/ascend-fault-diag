@@ -227,8 +227,10 @@ class ErrorInfoChecker(BaseChecker):
         self.name = "Timeout error"
 
         err_cate = ["get socket timeout", "connected p2p timeout", "notify timeout"]
-        timeout = self.rank_table.get_timeout('CONNECT_TIMEOUT') if reason_index < 2 \
-            else self.rank_table.get_timeout('NOTIFY_TIMEOUT')
+        if reason_index < 2:
+            timeout = self.rank_table.get_timeout('CONNECT_TIMEOUT')
+        else:
+            timeout = self.rank_table.get_timeout('NOTIFY_TIMEOUT')
 
         if int(timeout) < times:
             self.description = f"The cause of this error is '{err_cate[reason_index]}' " \
