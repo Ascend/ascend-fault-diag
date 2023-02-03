@@ -20,14 +20,13 @@ class Mode:
 
 
 class BaseChecker:
+    MAX_WORKER_NUM = 5
     name = "Base error"
     description = "Unknown errors happen in the training process."
     solution = "Please turn to the relevant engineer to solve this problem."
     root_rank_ids = None
     result = {"analyze_success": True, "engine_ver": "v1.0.0", "root_cause_worker": [], "root_cause_rank": [],
               "first_error_rank": None, "last_error_rank": None, "root_cause_description": ""}
-
-    MAX_WORKER_NUM = 5
 
     def __init__(self, rank_table):
         self.rank_table = rank_table
@@ -69,8 +68,8 @@ class BaseChecker:
 
 
 class AllRankNoErrChecker(BaseChecker):
-    name = "All rank have no error"
     HEARTBEAT_RE_LENGTH = 3
+    name = "All rank have no error"
 
     def _parse_heartbeat_content(self, plog_map):
         """

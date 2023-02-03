@@ -19,13 +19,6 @@ class BaseWorker:
         self.cfg = cfg
         self.log = init_job_logger(output_path, self.JOB_NAME)
 
-    def _job(self):
-        """
-        Use to implement specific task actions.
-        :return: job result
-        """
-        return self.err_result
-
     def work(self):
         """
         Use try except to catch subprocess errors during job, then return success or failure result and error info.
@@ -44,6 +37,13 @@ class BaseWorker:
             return SuccessRet(), self.JOB_NAME, result
         finally:
             self.log.info(f"The {self.JOB_NAME} is complete.")
+
+    def _job(self):
+        """
+        Use to implement specific task actions.
+        :return: job result
+        """
+        return self.err_result
 
 
 class RcParser(BaseWorker):
