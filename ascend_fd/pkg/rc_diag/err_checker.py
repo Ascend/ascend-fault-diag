@@ -71,6 +71,29 @@ class AllRankNoErrChecker(BaseChecker):
     HEARTBEAT_RE_LENGTH = 3
     name = "All rank have no error"
 
+    def check(self, plog_map, mode):
+        if mode == Mode.NO_FORCE_KILL:
+            self.description = "No errors logs are found on all ranks when the mode is NO_FORCE_KILL."
+            self.root_rank_ids = UNKNOWN_RANK
+            return
+
+        heartbeat_relation = self._parse_heartbeat_content(plog_map)
+        if len(heartbeat_relation) == self.rank_table.rank_num:
+            self.description = "No error logs are found on all Ranks. And all ranks have heartbeats."
+            self.root_rank_ids = UNKNOWN_RANK
+            return
+
+        if heartbeat_relation:
+            heartbeat_relation_list = sorted(heartbeat_relation.values(), key=lambda x: len(x), reverse=True)
+            no_heartbeat_max_set = set(heartbeat_relation_list[0])
+            self.description = f"In the FORCE_KILL mode, heartbeat was lost on rank {str(no_heartbeat_max_set)}"
+            self.solution = "Please check the training process on the lost heartbeat device."
+            self.root_rank_ids = no_heartbeat_max_set
+            return
+
+        self.description = "No error logs are found on all Ranks. And all ranks don't have heartbeats."
+        self.root_rank_ids = UNKNOWN_RANK
+
     def _parse_heartbeat_content(self, plog_map):
         """
         parse heartbeat info from plog by grep.
@@ -103,29 +126,6 @@ class AllRankNoErrChecker(BaseChecker):
             raise InfoNotFoundError("no heartbeat error is recorded in the log. "
                                     "Or the heartbeat is not enabled for training. Please check.")
         return heartbeat_relation
-
-    def check(self, plog_map, mode):
-        if mode == Mode.NO_FORCE_KILL:
-            self.description = "No errors logs are found on all ranks when the mode is NO_FORCE_KILL."
-            self.root_rank_ids = UNKNOWN_RANK
-            return
-
-        heartbeat_relation = self._parse_heartbeat_content(plog_map)
-        if len(heartbeat_relation) == self.rank_table.rank_num:
-            self.description = "No error logs are found on all Ranks. And all ranks have heartbeats."
-            self.root_rank_ids = UNKNOWN_RANK
-            return
-
-        if heartbeat_relation:
-            heartbeat_relation_list = sorted(heartbeat_relation.values(), key=lambda x: len(x), reverse=True)
-            no_heartbeat_max_set = set(heartbeat_relation_list[0])
-            self.description = f"In the FORCE_KILL mode, heartbeat was lost on rank {str(no_heartbeat_max_set)}"
-            self.solution = "Please check the training process on the lost heartbeat device."
-            self.root_rank_ids = no_heartbeat_max_set
-            return
-
-        self.description = "No error logs are found on all Ranks. And all ranks don't have heartbeats."
-        self.root_rank_ids = UNKNOWN_RANK
 
 
 class ErrorInfoChecker(BaseChecker):
