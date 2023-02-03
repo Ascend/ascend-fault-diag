@@ -2,30 +2,25 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 import argparse
 
-from ascend_fd.parse.controller import ParseController
-from ascend_fd.diag.controller import DiagController
-from ascend_fd.tool import path_check
+from ascend_fd.log import echo
+from ascend_fd.controller import router
 
 VERSION = "0.3"
 
 
-def version(args):
-    print(f"ascend-fd v{VERSION}")
-
-
-def parse(args):
-    args.input_path, args.output_path = path_check(args.input_path, args.output_path)
-    controller = ParseController(args)
-    controller.start_job()
-
-
-def diag(args):
-    args.input_path, args.output_path = path_check(args.input_path, args.output_path)
-    controller = DiagController(args)
-    controller.start_job()
-
-
 def command_line():
+    """
+    The command line interface. Commands contain:
+    1. version
+    2. parse
+      -i, --input_path, the input path of origin data file
+      -o, --output_path, the output path of parsed data file
+    3. diag
+      -i, --input_path, the input path of parsed data file
+      -o, --output_path, the output path of diag result file
+      -m, --mode, indicate whether a force-kill scenario is used
+      -p, --print, indicate whether to print the result
+    """
     args = argparse.ArgumentParser(add_help=True, description="Ascend Fault Diag")
     sub_arg = args.add_subparsers(dest="cmd", required=True)
 
@@ -41,26 +36,24 @@ def command_line():
     diag_cmd.add_argument("-i", "--input_path", type=str, required=True,
                           help="the input path of parsed data file")
     diag_cmd.add_argument("-o", "--output_path", type=str, required=True,
-                          help="the output path of result file")
-    diag_cmd.add_argument("-t", "--task", type=int, default=0, choices=[0, 1, 2, 3],
-                          help="the diag task id, please input one of [0,1,2,3]. "
-                               "0: execute all task, 1: kg diag task, 2: node diag task, 3: net diag task."
-                               "default 0.")
+                          help="the output path of diag result file")
     diag_cmd.add_argument("-m", "--mode", type=int, default=0, choices=[0, 1],
-                          help="Indicates whether a force-kill scenario is used. "
-                               "0: force-kill, 2: not force-kill. default 0.")
+                          help="indicate whether a force-kill scenario is used. "
+                               "0: force-kill, 1: not force-kill. default 0.")
     diag_cmd.add_argument("-p", "--print", action="store_true",
-                          help="Indicate whether to print the result. "
-                               "If no paramter is specified, the result is not printed.")
+                          help="indicate whether to print the result. "
+                               "If no parameter is specified, the result is not printed.")
 
     return args.parse_args()
 
 
+def show_version():
+    echo.info(f"ascend-fd v{VERSION}")
+
+
 def main():
-    func_map = {
-        "version": version,
-        "parse": parse,
-        "diag": diag
-    }
     args = command_line()
-    func_map.get(args.cmd)(args)
+    if args.cmd == "version":
+        show_version()
+        return
+    router(args)

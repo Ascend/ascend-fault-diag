@@ -1,12 +1,11 @@
 # ascend-fault-diag
+**1、依赖开源软件**:
+
+无
 
 ## Ascned-fd parse
 
-**1、依赖开源软件**:
-
-pandas
-
-**2、运行说明**
+**1、运行说明**
 
 wheel包安装后，命令执行
 
@@ -14,17 +13,17 @@ wheel包安装后，命令执行
 
 示例：`ascend-fd parse -i modelarts-log-dir/ -o ascend/`
 
-**3、参数说明**
+**2、参数说明**
 
 `-i {INPUT_PATH}`，输入目录，指定到需要清洗的日志目录
 
 `-o {OUTPUT_PATH}`，输出目录，指定到清洗完毕的数据输出目录
 
-**4、运行结果**
+**3、运行结果**
 
 日志清洗文件存放在`{OUTPUT_PATH}/fault_diag_data/worker-{task_index}/`下
 
-**5、源码打包**
+**4、源码打包**
 
 `python3 setup.py bdist_wheel`
 
@@ -32,11 +31,7 @@ wheel包安装后，命令执行
 
 ## Ascned-fd diag
 
-**1、依赖开源软件**:
-
-numpy、pandas、joblib、scikit-learn、xgboost
-
-**2、运行说明**
+**1、运行说明**
 
 wheel包安装后，命令执行
 
@@ -47,7 +42,7 @@ wheel包安装后，命令执行
 1）不打屏：`ascend-fd parse -i xx/fault_diag_data/ -o ascend/`
 2）打屏：`ascend-fd parse -i xx/fault_diag_data/ -o ascend/ -p`
 
-**3、参数说明**
+**2、参数说明**
 
 `-i {INPUT_PATH}`，输入目录，指定到清洗后的数据目录，需要强制指定到`fault_diag_data/`此级
 
@@ -55,15 +50,13 @@ wheel包安装后，命令执行
 
 `-p`，指定后开启输入打屏，默认不打屏
 
-`-t`，诊断任务，默认为0，即全执行。可选[0,1,2,3];1：知识图谱诊断，2：计算异常诊断，3：网络拥塞诊断
-
 `-m`，是否为心跳force-kill场景，默认为0，即force-kill场景。可选[0,1]；1：force-kill，2：no force-kill
 
-**4、运行结果**
+**3、运行结果**
 
 诊断报告文件存放在`{OUTPUT_PATH}/fault_diag_result/`下
 
-**5、源码打包**
+**4、源码打包**
 
 `python3 setup.py bdist_wheel`
 

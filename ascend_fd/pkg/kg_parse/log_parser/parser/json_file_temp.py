@@ -4,11 +4,13 @@
 import os
 
 from ascend_fd.pkg.kg_parse.utils import logger
+from ascend_fd.status import FileNotExistError
 from ascend_fd.pkg.kg_parse.log_parser.parser.bmc_log_package_parser_temp import BMCLogPackageParser
 
 
 class SingleJsonFileProcessing:
     """single json file process class"""
+    RESULT_FILE = "ascend-kg-parser.json"
 
     def __init__(self, config):
         self.config = config
@@ -20,14 +22,14 @@ class SingleJsonFileProcessing:
         :return:
         """
         if not os.path.isdir(result_path):
-            raise FileNotFoundError("result path '%s' not found" % result_path)
-        _package_parser = BMCLogPackageParser(self.config["log_package_parser"])
+            logger.error(f"result path {os.path.basename(result_path)} not found.")
+            raise FileNotExistError(f"result path {os.path.basename(result_path)} not found.")
+        package_parser = BMCLogPackageParser(self.config)
         logger.info("____start parse____")
-        _package_parser.parse()
+        package_parser.parse()
         logger.info("____end parse____")
-        desc = _package_parser.get_log_data_descriptor()
-        json_path = os.path.join(self.config["log_package_parser"]["result_path"],
-                                 self.config["log_package_parser"]["result_file"])
+        desc = package_parser.get_log_data_descriptor()
+        json_path = os.path.join(result_path, self.RESULT_FILE)
         logger.info("json file is %s", json_path)
         desc.dump_to_json_file(json_path)
         desc.clear()

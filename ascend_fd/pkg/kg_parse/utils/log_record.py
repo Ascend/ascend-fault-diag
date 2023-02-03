@@ -3,4 +3,4 @@
 import logging
 
 
-logger = logging.getLogger("kg_parse.log")
+logger = logging.getLogger("kg_parse")

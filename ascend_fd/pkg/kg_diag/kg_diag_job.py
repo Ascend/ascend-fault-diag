@@ -8,22 +8,22 @@ import subprocess
 import tarfile
 
 from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError
-from ascend_fd.pkg.kg_diag.rc_diag_job import RCDiagJob
-from ascend_fd.tool import safe_open
+from ascend_fd.tool import safe_open, safe_chmod
 
 
-kg_logger = logging.getLogger("kg_diag.log")
+kg_logger = logging.getLogger("kg_diag")
 PWD_PATH = os.path.dirname(os.path.realpath(__file__))
 KG_JAR_PATH = os.path.join(PWD_PATH, "kginfer.jar")
 KG_REPO = os.path.join(PWD_PATH, "knowledge-repository")
 MAX_WORKER_NUM = 5
 
 
-def start_kg_diag_job(input_path, output_path, worker_list, cfg):
+def start_kg_diag_job(output_path, worker_list, cfg):
     kg_result = dict()
     kg_relation = dict()
+    cfg = cfg.get("parse_data", {})
     for worker_id in worker_list:
-        result_json, relation_json = kg_diag_job(input_path, worker_id, cfg)
+        result_json, relation_json = kg_diag_job(worker_id, cfg)
         kg_result.update(result_json)
         kg_relation.update(relation_json)
 
@@ -31,14 +31,15 @@ def start_kg_diag_job(input_path, output_path, worker_list, cfg):
     kg_out_file = os.path.join(output_path, "kg_diag_report.json")
     with safe_open(kg_out_file, 'w+', encoding='utf8') as file_stream:
         file_stream.write(json.dumps(kg_result, ensure_ascii=False, indent=4))
+    safe_chmod(kg_out_file, 0o640)
 
     return kg_result
 
 
-def kg_diag_job(input_path, worker_id, cfg):
+def kg_diag_job(worker_id, cfg):
     kg_logger.info(f"start knowledge graph diagnosis task for worker-{worker_id}.")
     java_path = get_java_env()
-    input_json_zip = get_kg_input_zip(input_path, worker_id, cfg)
+    input_json_zip = get_kg_input_zip(worker_id, cfg)
 
     sub_res = subprocess.run([java_path, "-Xms128m", "-Xmx128m", "-jar", KG_JAR_PATH, KG_REPO, input_json_zip],
                               capture_output=True, shell=False)
@@ -70,8 +71,8 @@ def kg_diag_job(input_path, worker_id, cfg):
     return result_json, relation_json
 
 
-def get_kg_input_zip(input_path, rc_worker_id, cfg):
-    worker_parse_data = cfg['parse_data'].get(f'worker-{rc_worker_id}')
+def get_kg_input_zip(rc_worker_id, cfg):
+    worker_parse_data = cfg.get(f'worker-{rc_worker_id}')
     if not worker_parse_data:
         kg_logger.error(f'worker-{rc_worker_id} dir is not exist')
         raise FileNotExistError(f'worker-{rc_worker_id} dir is not exist')
@@ -81,8 +82,8 @@ def get_kg_input_zip(input_path, rc_worker_id, cfg):
         kg_logger.error(f'ascend-kg-parser.json is not exist in worker-{rc_worker_id}')
         raise FileNotExistError(f'ascend-kg-parser.json is not exist in worker-{rc_worker_id}')
 
-    file_path = os.path.join(input_path, f'worker-{rc_worker_id}')
-    tarfile_name = os.path.join(file_path, "ascend-kg-parser.tar.gz")
+    dir_path = os.path.dirname(file_name)
+    tarfile_name = os.path.join(dir_path, "ascend-kg-parser.tar.gz")
     with tarfile.open(tarfile_name, "w:gz") as tar_file:
         tar_file.add(file_name, arcname="ascend-kg-parser.json", recursive=False)
     return tarfile_name

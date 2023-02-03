@@ -7,12 +7,15 @@ import time
 from ascend_fd.pkg.kg_parse.log_parser.format_support.bmc_log_file_parser import BMCLogFileParser
 from ascend_fd.pkg.kg_parse.utils.log_record import logger
 from ascend_fd.tool import safe_open
+from ascend_fd.status import FileNotExistError
 
 
 class LineParser:
     """每一行的解析器"""
-    def __init__(self, name, regex, parm_regex=None, parm_dict_func=None, parm_regex1=None,
-                 parm_dict_func1=None, parm_regex2=None, parm_dict_func2=None):
+    def __init__(self, name, regex, parm_regex=None,
+                 parm_dict_func=None, parm_regex1=None,
+                 parm_dict_func1=None, parm_regex2=None,
+                 parm_dict_func2=None):
         self.name = name
         self.regex = regex
         self.parm_regex = parm_regex
@@ -46,12 +49,6 @@ class LineParser:
 
 class NpuInfoParser(BMCLogFileParser):
     """根据提供的正则表达式对文件每行数据进行解析及数据提取"""
-    VALID_PARAMS = {}
-    TARGET_FILE_PATTERNS = [
-        "npu_info_after",
-        "npu_info_before"
-    ]
-
     LINE_PARSERS = [
         LineParser(name="NpuRxTxErrBefore",
                    regex=re.compile(
@@ -75,19 +72,23 @@ class NpuInfoParser(BMCLogFileParser):
                    )
         ]
 
-    def __init__(self, configs: dict):
-        super().__init__(configs)
+    VALID_PARAMS = {}
+    TARGET_FILE_PATTERNS = ["npu_info_path"]
+
+    def __init__(self):
+        super().__init__()
 
     @classmethod
     def parse(cls, file_path_list: list):
-        _desc = dict()
-        _desc["events"] = list()
+        desc = dict()
+        desc["events"] = list()
         tmp_event_list_before = list()
         tmp_event_list_after = list()
 
         for file_path in file_path_list:
             if not os.path.isfile(file_path):
-                raise FileNotFoundError("file '%s' not exists." % file_path)
+                logger.error(f"file {os.path.basename(file_path)} not exists.")
+                raise FileNotExistError(f"file {os.path.basename(file_path)} not exists.")
             time_tamp = time.time()
             t_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_tamp))
             f_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(os.path.getmtime(file_path))))
@@ -118,7 +119,7 @@ class NpuInfoParser(BMCLogFileParser):
                 event_dict["f_time"] = f_time
                 event_dict["params"] = err_after["params"]
                 event_dict["params1"] = err_after["params1"]
-                _desc["events"].append(event_dict)
+                desc.setdefault("events", []).append(event_dict)
 
             # 增加 NpuTxErrIncreased事件
             if int(err_before["params2"]["tx_err_num"]) < int(err_after["params2"]["tx_err_num"]):
@@ -129,10 +130,9 @@ class NpuInfoParser(BMCLogFileParser):
                 event_dict["f_time"] = f_time
                 event_dict["params"] = err_after["params"]
                 event_dict["params1"] = err_after["params2"]
-                _desc["events"].append(event_dict)
+                desc.setdefault("events", []).append(event_dict)
 
-        if "events" in _desc and len(_desc["events"]) > 0:
-            _desc["parse_next"] = True
-            return _desc
+        if "events" in desc and len(desc.get("events", [])) > 0:
+            desc["parse_next"] = True
+            return desc
         return {"parse_next": True}
-
