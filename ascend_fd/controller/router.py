@@ -2,7 +2,7 @@
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 from ascend_fd.tool import path_check
 from ascend_fd.log import echo
-from ascend_fd.status import FileNotExistError
+from ascend_fd.status import BaseError
 from ascend_fd.controller.controller import ParseController, DiagController
 
 
@@ -14,12 +14,17 @@ def router(args):
     """
     try:
         args.input_path, args.output_path = path_check(args.input_path, args.output_path)
-    except FileNotExistError as err:
+    except BaseError as err:
         echo.error(err)
         return
 
     if args.cmd == "parse":
-        controller = ParseController(args)
+        controller_class = ParseController
     else:
-        controller = DiagController(args)
-    controller.start_job()
+        controller_class = DiagController
+    try:
+        controller = controller_class(args)
+        controller.start_job()
+    except BaseError as err:
+        echo.error(err)
+        return
