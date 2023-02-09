@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from ascend_fd.log import echo
+from ascend_fd.status import BaseError
 from ascend_fd.controller import router
 from ascend_fd.tool import safe_open, VERSION_FILE_READ_LIMIT
 
@@ -59,4 +60,8 @@ def main():
     if args.cmd == "version":
         show_version()
         return
-    router(args)
+
+    try:
+        router(args)
+    except BaseError as err:
+        echo.error(err)
