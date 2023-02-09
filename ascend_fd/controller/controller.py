@@ -9,8 +9,8 @@ from dataclasses import dataclass
 
 from ascend_fd.tool import safe_open
 from ascend_fd import regular_rule
-from ascend_fd.status import BaseError, InfoNotFoundError, PathError
-from ascend_fd.log import init_main_logger, LOG_WIDTH, echo
+from ascend_fd.status import BaseError, PathError
+from ascend_fd.log import init_main_logger, LOG_WIDTH
 from ascend_fd.controller.job_worker import RcParser, KgParser, KgDiagnoser
 
 
@@ -125,9 +125,6 @@ class ParseController:
         :return: the final output dir path
         """
         worker_id = self.cfg.worker_id
-        if not worker_id:
-            raise InfoNotFoundError("cannot find worker id, please check whether the input path is correct.")
-
         output_path = os.path.join(output_path, self.OUT_DIR)
         if os.listdir(output_path):
             raise PathError("the output path already has a fault_diag_data folder that is not empty.")
