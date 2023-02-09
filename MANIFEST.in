@@ -1,0 +1,8 @@
+recursive-include ascend_fd/ *.json
+recursive-include ascend_fd/ *.txt
+recursive-include ascend_fd/ *.pkl
+recursive-include ascend_fd/ *.jar
+recursive-include ascend_fd/ *.info
+prune tests/
+prune script/
+prune docker/
