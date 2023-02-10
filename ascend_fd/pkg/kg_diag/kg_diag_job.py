@@ -42,15 +42,14 @@ def kg_diag_job(worker_id, parsed_data):
     input_json_zip = get_kg_input_zip(worker_id, parsed_data)
 
     sub_res = subprocess.run([java_path, "-Xms128m", "-Xmx128m", "-jar", KG_JAR_PATH, KG_REPO, input_json_zip],
-                             capture_output=True, shell=False)
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
     result_find = re.search(r"{(\"analyze_success.*?)}$", sub_res.stdout.decode())
     os.remove(input_json_zip)
 
     if not result_find:
-        kg_logger.error(f"the kg-engine analyze worker-{worker_id} error, "
-                        f"the analysis results in the corresponding format is not found.")
-        raise InfoNotFoundError(f"the analysis results in the corresponding format "
-                                f"is not found for worker-{worker_id}.")
+        engine_err = sub_res.stderr.decode()
+        kg_logger.error(f"the kg-engine analyze worker-{worker_id} failed. The reason is: {engine_err}")
+        raise InfoNotFoundError(f"the kg-engine analyze worker-{worker_id} failed. Please check the detail log.")
 
     result_str = "{" + result_find[1] + "}"
     return diag_json_wrapper(result_str, worker_id)
