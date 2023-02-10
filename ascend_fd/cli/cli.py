@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 
 from ascend_fd.log import echo
-from ascend_fd.status import BaseError
 from ascend_fd.controller import router
 from ascend_fd.tool import safe_open, VERSION_FILE_READ_LIMIT
 
@@ -63,5 +62,5 @@ def main():
 
     try:
         router(args)
-    except BaseError as err:
+    except Exception as err:
         echo.error(err)
