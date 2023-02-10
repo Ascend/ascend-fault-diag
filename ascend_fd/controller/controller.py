@@ -126,7 +126,7 @@ class ParseController:
         """
         worker_id = self.cfg.worker_id
         output_path = os.path.join(output_path, self.OUT_DIR)
-        if os.listdir(output_path):
+        if os.path.exists(output_path) and os.listdir(output_path):
             raise PathError("the output path already has a fault_diag_data folder that is not empty.")
 
         output_path = os.path.join(output_path, f"worker-{worker_id}")
