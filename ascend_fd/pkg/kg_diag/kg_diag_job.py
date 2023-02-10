@@ -9,6 +9,7 @@ import tarfile
 
 from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError
 from ascend_fd.tool import safe_open, safe_chmod
+from ascend_fd.pkg.kg_diag.root_cause_zh import RootCauseZhTranslater
 
 kg_logger = logging.getLogger("kg_diag")
 PWD_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -52,16 +53,33 @@ def kg_diag_job(worker_id, parsed_data):
                                 f"is not found for worker-{worker_id}.")
 
     result_str = "{" + result_find[1] + "}"
-    diag_json = json.loads(result_str)
-    if diag_json.get("fault_chain", None):
-        diag_json["fault_chain"] = json.loads(diag_json["fault_chain"])
+    return diag_json_wrapper(result_str, worker_id)
 
+
+def diag_json_wrapper(result_str, worker_id):
+    result_json = {
+        "analyze_success": None,
+        "engin_ver": None,
+        "root_cause_zh_CN": None,
+        "root_cause_en_US": None,
+        "rlt_graph": None
+    }
     relation_json = dict()
-    if diag_json.get("fault_chain", None):
-        relation_json["rlt_graph"] = json.loads(diag_json["rlt_graph"])
+
+    diag_json = json.loads(result_str)
+    for key in result_json:
+        if key == "rlt_graph":
+            relation_json["rlt_graph"] = json.loads(diag_json["rlt_graph"])
+        result_json[key] = diag_json.get(key, None)
+
+    root_cause_en = result_json.get("root_cause_en_US", None)
+    if root_cause_en:
+        result_json["root_cause_zh_CN"] = RootCauseZhTranslater.get_root_cause_zh(root_cause_en)
+    else:
+        result_json["root_cause_zh_CN"] = None
 
     result_json = {
-        f"worker-{worker_id}": diag_json
+        f"worker-{worker_id}": result_json
     }
     relation_json = {
         f"worker-{worker_id}": relation_json

@@ -140,7 +140,6 @@ class PlogParser(BMCLogFileParser):
                    file_filter="plog",
                    keywords=["fault kernel_name", "func_name"],
                    ),
-
         LineParser(name="ExecuteModelFailed",
                    regex=re.compile(
                        r".*?ModelExecute.*?Execute model failed.*?"),
