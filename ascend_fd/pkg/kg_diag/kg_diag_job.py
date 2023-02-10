@@ -75,7 +75,7 @@ def diag_json_wrapper(result_str, worker_id):
     if root_cause_en:
         result_json["root_cause_zh_CN"] = RootCauseZhTranslater.get_root_cause_zh(root_cause_en)
     else:
-        result_json["root_cause_zh_CN"] = None
+        result_json["root_cause_zh_CN"] = ""
 
     result_json = {
         f"worker-{worker_id}": result_json
