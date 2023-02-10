@@ -136,10 +136,11 @@ class PlogParser(BMCLogFileParser):
                    ),
         LineParser(name="FailedToexecuteTheAICoreOperator",
                    regex=re.compile(
-                       r".*?PrintErrorInfo.*?fault kernel_name.*?func_name.*?"),
+                       r".*?fault kernel_name.*?func_name.*?"),
                    file_filter="plog",
-                   keywords=["PrintErrorInfo", "fault kernel_name", "func_name"],
+                   keywords=["fault kernel_name", "func_name"],
                    ),
+
         LineParser(name="ExecuteModelFailed",
                    regex=re.compile(
                        r".*?ModelExecute.*?Execute model failed.*?"),
