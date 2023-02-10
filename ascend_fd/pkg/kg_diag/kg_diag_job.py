@@ -59,7 +59,7 @@ def kg_diag_job(worker_id, parsed_data):
 def diag_json_wrapper(result_str, worker_id):
     result_json = {
         "analyze_success": None,
-        "engin_ver": None,
+        "engine_ver": None,
         "root_cause_zh_CN": None,
         "root_cause_en_US": None,
         "rlt_graph": None

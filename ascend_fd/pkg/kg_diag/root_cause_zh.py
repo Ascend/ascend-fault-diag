@@ -34,5 +34,5 @@ class RootCauseZhTranslater:
     @classmethod
     def get_root_cause_zh(cls, root_cause_en, sep=','):
         root_cause_en_list = root_cause_en.split(sep)
-        return ",".join([cls.ROOT_CAUSE_EN_TO_ZH.get(root_cause.strip(), cls.DEFAULT_CAUSE_ZH)
+        return ", ".join([cls.ROOT_CAUSE_EN_TO_ZH.get(root_cause.strip(), cls.DEFAULT_CAUSE_ZH)
                          for root_cause in root_cause_en_list])
