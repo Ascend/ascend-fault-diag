@@ -327,3 +327,12 @@ class NoErrInNFKChecker(BaseChecker):
                            f"The possible cause is that the process is hung."
         self.solution = "Please check the train process on the wrong rank ids."
         self.root_ranks = self.rank_table.no_err_rank
+
+
+class SingleRankChecker(BaseChecker):
+    name = "Single rank error"
+
+    def check(self, plog_map, mode):
+        self.description = "This is a single-card training task, and the root cluster diag task will skip."
+        self.solution = "Please check the knowledge graph diag task result."
+        self.root_ranks = Rank(worker_id="0", rank_id="0")

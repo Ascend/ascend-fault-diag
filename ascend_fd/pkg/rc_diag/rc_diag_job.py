@@ -6,7 +6,7 @@ import re
 import json
 
 from ascend_fd.status import FileNotExistError, InfoNotFoundError, InfoIncorrectError
-from ascend_fd.pkg.rc_diag.err_checker import (AllRankNoErrChecker, LostLogChecker,
+from ascend_fd.pkg.rc_diag.err_checker import (AllRankNoErrChecker, LostLogChecker, SingleRankChecker,
                                                ErrorInfoChecker, NoErrInNFKChecker, Mode, Rank)
 from ascend_fd.tool import safe_open, popen_grep, safe_chmod
 from ascend_fd import regular_rule
@@ -133,7 +133,9 @@ class RCDiagWorker:
         start root cluster diag job.
         :return: the reason and rank_id.
         """
-        if not self._check_rank_num():
+        if self.rank_table.rank_num == -1:
+            return SingleRankChecker(self.rank_table)
+        if len(self.plog_map) != self.rank_table.rank_num:
             return LostLogChecker(self.rank_table)
         if len(self.rank_table.no_err_rank) == self.rank_table.rank_num:
             return AllRankNoErrChecker(self.rank_table)
@@ -218,14 +220,6 @@ class RCDiagWorker:
         else:
             self.rank_table.add_no_err_rank(rank)
         self.plog_map.update({rank: plog_file})
-
-    def _check_rank_num(self):
-        rank_num = self.rank_table.rank_num
-        if rank_num == -1:
-            rc_logger.error("not found rank_num value. Please check whether the plog file is correct.")
-            raise InfoNotFoundError("not found rank_num value. Please check whether the plog file is correct.")
-
-        return len(self.plog_map) == rank_num
 
 
 def start_rc_diag_job(output_path, cfg):
