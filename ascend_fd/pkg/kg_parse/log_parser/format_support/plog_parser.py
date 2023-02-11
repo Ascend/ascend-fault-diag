@@ -1,5 +1,5 @@
-#!/user/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding:utf-8 -*-
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
 import re
 import math

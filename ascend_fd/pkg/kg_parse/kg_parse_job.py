@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-# Copyright(C) Huawei Technologies Co.,Ltd. 2022. All rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 from ascend_fd.status import FileNotExistError
 from ascend_fd.pkg.kg_parse.utils import logger
 from ascend_fd.pkg.kg_parse.log_parser import SingleJsonFileProcessing
