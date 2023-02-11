@@ -42,8 +42,8 @@ def kg_diag_job(worker_id, parsed_data):
     input_json_zip = get_kg_input_zip(worker_id, parsed_data)
 
     sub_res = subprocess.run([java_path, "-Xms128m", "-Xmx128m", "-jar", KG_JAR_PATH, KG_REPO, input_json_zip],
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-    result_find = re.search(r"{(\"analyze_success.*?)}$", sub_res.stdout.decode())
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding="utf-8")
+    result_find = re.search(r"{(\"analyze_success.*?)}$", sub_res.stdout)
     os.remove(input_json_zip)
 
     if not result_find:
