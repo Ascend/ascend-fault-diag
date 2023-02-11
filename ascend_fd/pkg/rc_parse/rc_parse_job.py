@@ -95,7 +95,7 @@ def get_info_from_file(cate, in_file, out_file):
     for line in logs:
         is_write = True
         with safe_open(out_file, "a+") as out:
-            out.write(line.decode())
+            out.write(line)
     if cate == "error":
         is_error = True
 

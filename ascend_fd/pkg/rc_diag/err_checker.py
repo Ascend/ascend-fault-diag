@@ -148,12 +148,11 @@ class AllRankNoErrChecker(BaseChecker):
         heartbeat_relation = dict()
         flag = False
         for plog_file in plog_map.values():
-            heartbeat_grep = popen_grep(regular_rule.HEARTBEAT_INFO, plog_file)
+            heartbeat_grep = popen_grep(regular_rule.HEARTBEAT_INFO, file=plog_file)
             heartbeat_logs = heartbeat_grep.stdout.readlines()
             if not heartbeat_logs:
                 continue
             for heartbeat_log in heartbeat_logs:
-                heartbeat_log = heartbeat_log.decode()
                 if re.search(regular_rule.EVENT_HCCL, heartbeat_log):
                     heartbeat_re = re.findall(regular_rule.HEARTBEAT_RANK, heartbeat_log)
                     if not heartbeat_re or len(heartbeat_re) != self.HEARTBEAT_RE_LENGTH:
@@ -179,13 +178,13 @@ class ErrorInfoChecker(BaseChecker):
 
     @staticmethod
     def update_err_content_from_log(rank, error_logs):
-        first_err_info = error_logs[0].decode().strip()
+        first_err_info = error_logs[0].strip()
         times = first_err_info.split()[1].split(")")[1].strip(":")
         err_time = times[:-4] + times[-3:]
 
         hccl_count = 0
         for err_info in error_logs:
-            err_info = err_info.decode().strip()
+            err_info = err_info.strip()
             if re.search(regular_rule.ERROR_HCCL, err_info):
                 hccl_count += 1
             rank.add_err_log(err_info)
@@ -228,7 +227,7 @@ class ErrorInfoChecker(BaseChecker):
             plog_file = plog_map.get(rank, None)
             if not plog_file:
                 continue
-            err_grep = popen_grep(regular_rule.ERROR, plog_file)
+            err_grep = popen_grep(regular_rule.ERROR, file=plog_file)
             error_logs = err_grep.stdout.readlines()
             if not error_logs:
                 continue

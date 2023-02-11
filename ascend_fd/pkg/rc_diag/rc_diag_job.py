@@ -82,7 +82,7 @@ class RCDiagWorker:
         self.mode = cfg.mode
         self.rank_table = RankTable()
 
-        self.pid_map = dict()
+        self.rank_pid_map = dict()
         self.plog_map = dict()
 
     @staticmethod
@@ -92,20 +92,19 @@ class RCDiagWorker:
         """
         rc_logger.info(f"get the rank info from plog file {os.path.basename(plog_file)} by grep trace log.")
         rank_num = -1
-        trace_grep = popen_grep(regular_rule.TRACE_HCCL, plog_file)
-        rank_grep = popen_grep(regular_rule.RANK_INFO, None, stdin=trace_grep.stdout)
+        trace_grep = popen_grep(regular_rule.TRACE_HCCL, file=plog_file)
+        rank_grep = popen_grep(regular_rule.RANK_INFO, stdin=trace_grep.stdout)
         rank_logs = rank_grep.stdout.readlines()
         if not rank_logs:
             rc_logger.info(f"cannot get rank info by grep trace log. "
                            f"Get the rank info from plog file {os.path.basename(plog_file)} by grep error log.")
-            error_grep = popen_grep(regular_rule.ERROR_HCCL, plog_file)
-            rank_grep = popen_grep(regular_rule.RANK_INFO, None, stdin=error_grep.stdout)
+            error_grep = popen_grep(regular_rule.ERROR_HCCL, file=plog_file)
+            rank_grep = popen_grep(regular_rule.RANK_INFO, stdin=error_grep.stdout)
             rank_logs = rank_grep.stdout.readlines()
             if not rank_logs:
                 return rank_num, Rank()
 
         for rank_log in rank_logs:
-            rank_log = rank_log.decode()
             info_re = re.search(regular_rule.RANKNUM_AND_ID_RE, rank_log)
             if info_re:
                 rank_num = int(info_re[1])
@@ -172,13 +171,13 @@ class RCDiagWorker:
         timeout_content = ["HCCL_CONNECT_TIMEOUT is set", "ExecTimeOut is set"]
 
         for index, op in enumerate(timeout_content):
-            event_grep = popen_grep(regular_rule.EVENT_HCCL, plog_file)
-            op_grep = popen_grep(op, None, stdin=event_grep.stdout)
+            event_grep = popen_grep(regular_rule.EVENT_HCCL, file=plog_file)
+            op_grep = popen_grep(op, stdin=event_grep.stdout)
             timeout_logs = op_grep.stdout.readlines()
             if not timeout_logs:
                 continue
             for timeout_log in timeout_logs:
-                timeout_re = re.search(regular_rule.TIME_OUT_RE, timeout_log.decode())
+                timeout_re = re.search(regular_rule.TIME_OUT_RE, timeout_log)
                 if timeout_re:
                     self.rank_table.update_timeout(category[index], int(timeout_re[1]))
                     break
@@ -207,12 +206,12 @@ class RCDiagWorker:
 
         self.rank_table.rank_num = rank_num
 
-        if self.pid_map.get(pid) and rank != self.pid_map.get(pid):
+        if self.rank_pid_map.get(rank) and pid != self.rank_pid_map.get(rank):
             rc_logger.error("the input file path may contain logs of more than one training session. "
                             "Please check whether the plog file is correct.")
             raise InfoIncorrectError("the input file path may contain logs of more than one training session. "
                                      "Please check whether the plog file is correct.")
-        self.pid_map[pid] = rank
+        self.rank_pid_map[rank] = pid
 
         self.rank_table.add_rank(rank)
         if is_error:
