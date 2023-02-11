@@ -112,7 +112,7 @@ class RCDiagWorker:
                 server_id, device_id = "0.0.0.0", "-1"
                 ser_dev_re = re.search(regular_rule.SERVER_AND_DEVICE_RE, rank_log)
                 if ser_dev_re:
-                    server_id, device_id = ser_dev_re[0], ser_dev_re[1]
+                    server_id, device_id = ser_dev_re[1], ser_dev_re[2]
                 return rank_num, Rank(worker_id, rank_id, server_id, device_id)
         return rank_num, Rank()
 
