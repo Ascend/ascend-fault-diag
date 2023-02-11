@@ -43,15 +43,15 @@ def kg_diag_job(worker_id, parsed_data):
 
     sub_res = subprocess.run([java_path, "-Xms128m", "-Xmx128m", "-jar", KG_JAR_PATH, KG_REPO, input_json_zip],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding="utf-8")
-    result_find = re.search(r"{(\"analyze_success.*?)}$", sub_res.stdout)
+    result_find = re.compile(r"{.*?analyze_success.*?}").findall(sub_res.stdout)
     os.remove(input_json_zip)
 
     if not result_find:
-        engine_err = sub_res.stderr.decode()
+        engine_err = sub_res.stderr
         kg_logger.error(f"the kg-engine analyze worker-{worker_id} failed. The reason is: {engine_err}")
         raise InfoNotFoundError(f"the kg-engine analyze worker-{worker_id} failed. Please check the detail log.")
 
-    result_str = "{" + result_find[1] + "}"
+    result_str = result_find[0]  # only match one reasoning result
     return diag_json_wrapper(result_str, worker_id)
 
 
