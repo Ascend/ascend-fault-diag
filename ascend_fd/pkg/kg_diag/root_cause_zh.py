@@ -5,13 +5,13 @@ class RootCauseZhTranslater:
     DEFAULT_CAUSE_ZH = "未知根因"
 
     ROOT_CAUSE_EN_TO_ZH = {
-        "RuntimeTaskException_Alarm": "RUNTIME报任务异常",
-        "RuntimeAicoreError_Alarm": "RUNTIME报aicore错误",
-        "RuntimeModelExecuteTaskFailed_Alarm": "RUNTIME报模型执行任务失败",
-        "RuntimeAicoreKernelExecuteFailed_Alarm": "RUNTIME报aicore内核执行失败",
-        "RuntimeStreamSyncFailed_Alarm": "RUNTIME报流同步失败",
-        "GEModelStreamSyncFailed_Alarm": "GE报模型流同步失败",
-        "GERunModelFail_Alarm": "GE报运行模型失败",
+        "RuntimeTaskException_Alarm": "RUNTIME报错：任务异常",
+        "RuntimeAicoreError_Alarm": "RUNTIME报错：aicore错误",
+        "RuntimeModelExecuteTaskFailed_Alarm": "RUNTIME报错：模型执行任务失败",
+        "RuntimeAicoreKernelExecuteFailed_Alarm": "RUNTIME报错：aicore内核执行失败",
+        "RuntimeStreamSyncFailed_Alarm": "RUNTIME报错：流同步失败",
+        "GEModelStreamSyncFailed_Alarm": "GE报错：模型流同步失败",
+        "GERunModelFail_Alarm": "GE报错：运行模型失败",
 
         "FailedToApplyForResources_Alarm": "资源申请失败",
         "RegisteredResourcesExceedsTheMaximum_Alarm": "注册资源超过最大值失败",
