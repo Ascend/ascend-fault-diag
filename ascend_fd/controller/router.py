@@ -1,5 +1,5 @@
-# coding: UTF-8
-# Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
+# -*- coding:utf-8 -*-
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 from ascend_fd.tool import path_check
 from ascend_fd.controller.controller import ParseController, DiagController
 

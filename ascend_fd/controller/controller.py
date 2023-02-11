@@ -1,5 +1,5 @@
-# coding: UTF-8
-# Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
+# -*- coding:utf-8 -*-
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
 import re
 import heapq
@@ -15,14 +15,14 @@ from ascend_fd.controller.job_worker import RcParser, KgParser, KgDiagnoser
 
 
 @dataclass
-class PCFG:
+class ParseCFG:
     plog_path: dict
     npu_info_path: list
     worker_id: str
 
 
 @dataclass
-class DCFG:
+class DiagCFG:
     mode: int
     parse_data: dict
 
@@ -75,7 +75,7 @@ class ParseController:
                 if worker_re:
                     worker_id = worker_re[1]
 
-        return PCFG(plog_path, npu_info_path, worker_id)
+        return ParseCFG(plog_path, npu_info_path, worker_id)
 
     def start_job(self):
         """
@@ -196,7 +196,7 @@ class DiagController:
                 }
             })
 
-        return DCFG(mode, parse_data)
+        return DiagCFG(mode, parse_data)
 
     def start_job(self):
         """

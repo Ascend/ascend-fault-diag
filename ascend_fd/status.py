@@ -1,5 +1,5 @@
-# coding: UTF-8
-# Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
+# -*- coding:utf-8 -*-
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 class BaseError(Exception):
     code = 500
     description = "Internal Server Error."
