@@ -12,7 +12,7 @@ PLOG_ORIGIN_RE = r"plog-(\d+)_(\d+).log$"
 # diag
 PLOG_PARSE_RE = r"plog-parser-(\d+)-(\d+).log$"
 RANKNUM_AND_ID_RE = r"rankNum\[(\d+)\], rank\[(\d+)\]"
-SERVER_AND_DEVICE_RE = r"server\[(\d+.\d+.\d+.\d+\)], device\[(\d+)\]"
+SERVER_AND_DEVICE_RE = r"server\[(\d+.\d+.\d+.\d+)], device\[(\d+)\]"
 TIME_OUT_RE = r"timeOut\[(\d+)\]"
 ERROR = "ERROR"
 RANK_INFO = r", rank\["
@@ -21,7 +21,7 @@ ERROR_HCCL = r"\[ERROR\] HCCL"
 ERROR_HCCP = r"\[ERROR\] HCCP"
 EVENT_HCCL = r"\[EVENT\] HCCL"
 HEARTBEAT_INFO = "error status"
-HEARTBEAT_RANK = r"rank \[\[(\d+.\d+.\d+.\d+\)]\[(\d+)\]\]"
+HEARTBEAT_RANK = r"rank \[\[(\d+.\d+.\d+.\d+)]\[(\d+)\]\]"
 
 
 # Kg job
