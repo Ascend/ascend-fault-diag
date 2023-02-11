@@ -1,39 +1,77 @@
 # ascend-fault-diag
+**1、依赖开源软件**:
 
-#### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+无
 
-#### 软件架构
-软件架构说明
+## Ascned-fd parse
 
+**1、运行说明**
 
-#### 安装教程
+wheel包安装后，命令执行
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+`ascend-fd parse -i {INPUT_PATH} -o {OUTPUT_PATH}`
 
-#### 使用说明
+示例：`ascend-fd parse -i modelarts-log-dir/ -o ascend/`
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+**2、参数说明**
 
-#### 参与贡献
+`-i {INPUT_PATH}`，输入目录，指定到需要清洗的日志目录
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+`-o {OUTPUT_PATH}`，输出目录，指定到清洗完毕的数据输出目录
 
+**3、运行结果**
 
-#### 特技
+日志清洗文件存放在`{OUTPUT_PATH}/fault_diag_data/worker-{task_index}/`下
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+**4、源码打包**
+
+`python3 setup.py bdist_wheel`
+
+--------
+
+## Ascned-fd diag
+
+**1、运行说明**
+
+wheel包安装后，命令执行
+
+`ascend-fd diag -i {INPUT_PATH} -o {OUTPUT_PATH}`
+
+示例：
+
+1）不打屏：`ascend-fd parse -i xx/fault_diag_data/ -o ascend/`
+2）打屏：`ascend-fd parse -i xx/fault_diag_data/ -o ascend/ -p`
+
+**2、参数说明**
+
+`-i {INPUT_PATH}`，输入目录，指定到清洗后的数据目录，需要强制指定到`fault_diag_data/`此级
+
+`-o {OUTPUT_PATH}`，输出目录，指定到诊断完毕的报告输出目录
+
+`-p`，指定后开启输入打屏，默认不打屏
+
+`-m`，是否为心跳force-kill场景，默认为0，即force-kill场景。可选[0,1]；1：force-kill，2：no force-kill
+
+**3、运行结果**
+
+诊断报告文件存放在`{OUTPUT_PATH}/fault_diag_result/`下
+
+**4、源码打包**
+
+`python3 setup.py bdist_wheel`
+
+--------
+
+## 镜像使用示例
+
+**1、启动镜像，挂在清洗后数据目录**
+
+ma-user执行：`docker run -it --rm -v /xxx/ascend:/home/ma-user/job/ascend/ ascned-fd-ubuntu-20.04-py38:v0.3`
+
+root执行：`docker run -it --rm --user=root -v /xxx/ascend:/home/ma-user/job/ascend/ ascned-fd-ubuntu-20.04-py38:v0.3`
+
+**2、执行诊断命令**
+
+`ascend-fd diag -i {INPUT_PATH} -o {OUTPUT_PATH}`
+
+示例：`ascend-fd diag -i /home/ma-user/job/ascend/fault_diag_data/ -o /home/ma-user/job/ascend/ -p`
