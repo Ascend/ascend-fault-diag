@@ -1,14 +1,13 @@
 # coding: UTF-8
 # Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
 import os
-import stat
 import subprocess
 
 from ascend_fd.status import FileNotExistError, FileOpenError
 
 VERSION_FILE_READ_LIMIT = 100
-MAX_SIZE = 1024 * 1024 * 1024
-GB_SHIFT = 30
+MAX_SIZE = 512 * 1024 * 1024
+MB_SHIFT = 20
 
 
 def path_check(input_path, output_path):
@@ -35,15 +34,14 @@ def safe_open(file, *args, **kwargs):
     :param kwargs: the open function parameters.
     :return: file_stream
     """
+    if os.path.islink(file):
+        raise FileOpenError(f"{os.path.basename(file)} should not be a symbolic link file.")
     file_real_path = os.path.realpath(file)
     file_stream = open(file_real_path, *args, **kwargs)
     file_info = os.stat(file_stream.fileno())
-    if stat.S_ISLNK(file_info.st_mode):
-        file_stream.close()
-        raise FileOpenError(f"{os.path.basename(file)} should not be a symbolic link file.")
     if file_info.st_size > MAX_SIZE:
         file_stream.close()
-        raise FileOpenError(f"the size of {os.path.basename(file)} should be less than {MAX_SIZE >> GB_SHIFT} GB.")
+        raise FileOpenError(f"the size of {os.path.basename(file)} should be less than {MAX_SIZE >> MB_SHIFT} MB.")
     return file_stream
 
 
@@ -57,21 +55,20 @@ def safe_chmod(file, mode):
         os.fchmod(file_stream.fileno(), mode)
 
 
-def popen_grep(rule, file, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+def popen_grep(rule, file=None, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
     """
-    use subprocess.popen to perform grep operations.
+    use subprocess.popen to perform grep operations. file and stdin param must exist one.
     :param rule: grep rule
     :param file: the file
-    :param stdin: the popen stdin, default None
+    :param stdin: the popen stdin
     :param stdout: the popen stdout, default PIPE
     :param stderr: the popen stderr, default PIPE
     :return: popen instance
     """
-    cmd_list = ["/usr/bin/grep"]
-    if stdin:
-        cmd_list.append(rule)
-        return subprocess.Popen(cmd_list, shell=False, stdin=stdin, stdout=stdout, stderr=stderr)
-
-    with safe_open(file):
-        cmd_list.extend([rule, file])
-    return subprocess.Popen(cmd_list, shell=False, stdout=stdout, stderr=stderr)
+    cmd_list = ["/usr/bin/grep", rule]
+    if file:
+        with safe_open(file) as file_stream:
+            return subprocess.Popen(cmd_list, shell=False, stdin=file_stream,
+                                    stdout=stdout, stderr=stderr, encoding="utf-8")
+    return subprocess.Popen(cmd_list, shell=False, stdin=stdin,
+                            stdout=stdout, stderr=stderr, encoding="utf-8")
