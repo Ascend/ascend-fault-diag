@@ -154,13 +154,17 @@ class AllRankNoErrChecker(BaseChecker):
                 continue
             for heartbeat_log in heartbeat_logs:
                 if re.search(regular_rule.EVENT_HCCL, heartbeat_log):
+                    # According to the regular rules, 3 sets of matching results will be found,
+                    # which are record node, lost heartbeat node, and report node.
+                    # Each set of results includes (ip_addr, device_id)
                     heartbeat_re = re.findall(regular_rule.HEARTBEAT_RANK, heartbeat_log)
                     if not heartbeat_re or len(heartbeat_re) != self.HEARTBEAT_RE_LENGTH:
                         continue
                     flag = True
                     live_re, dead_re = heartbeat_re[0], heartbeat_re[1]
-                    live_server, live_device = f"{live_re[0]}.{live_re[1]}.{live_re[2]}.{live_re[3]}", live_re[4]
-                    dead_server, dead_device = f"{dead_re[0]}.{dead_re[1]}.{dead_re[2]}.{dead_re[3]}", dead_re[4]
+                    # The record node is live server, the lost heartbeat node is dead server.
+                    live_server, live_device = live_re[0], live_re[1]
+                    dead_server, dead_device = dead_re[0], dead_re[1]
                     live_rank = self.rank_table.get_rank_from_server_device_id(live_server, live_device)
                     dead_rank = self.rank_table.get_rank_from_server_device_id(dead_server, dead_device)
                     heartbeat_relation.setdefault(live_rank, list()).append(dead_rank)
@@ -178,9 +182,13 @@ class ErrorInfoChecker(BaseChecker):
 
     @staticmethod
     def update_err_content_from_log(rank, error_logs):
+        # The log example:
+        # "[ERROR] XXXX(**,**):20yy-mm-dd-xx:xx:xx.xxx.xxx ********************"
         first_err_info = error_logs[0].strip()
+
+        # get the first error log's time stamp and remove the separation point of millisecond.
         times = first_err_info.split()[1].split(")")[1].strip(":")
-        err_time = times[:-4] + times[-3:]
+        err_time = times[:-4] + times[-3:]  # "20yy-mm-dd-xx:xx:xx.xxx.xxx" -> "20yy-mm-dd-xx:xx:xx.xxxxxx"
 
         hccl_count = 0
         for err_info in error_logs:
