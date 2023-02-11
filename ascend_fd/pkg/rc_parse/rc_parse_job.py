@@ -88,7 +88,7 @@ def get_info_from_file(cate, in_file, out_file):
     if not rule:
         rc_logger.error(f"{cate} doesn't exist in PARSE_RULE")
         raise InnerError(f"{cate} doesn't exist in PARSE_RULE")
-    grep = popen_grep(rule, in_file)
+    grep = popen_grep(rule, file=in_file)
     logs = grep.stdout.readlines()
     if not logs:
         return is_write, is_error
