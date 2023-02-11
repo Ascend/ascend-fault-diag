@@ -49,10 +49,10 @@ class RankTable:
         :return:
         """
         self.rank_map.update({rank.rank_id: rank})
-        self.server_device_map.update({f"{rank.server_id}-{rank.device_id}": rank})
+        self.server_device_map.update({(rank.server_id, rank.device_id): rank})
 
     def get_rank_from_server_device_id(self, server_id, device_id):
-        return self.server_device_map.get(f"{server_id}-{device_id}", Rank())
+        return self.server_device_map.get((server_id, device_id), Rank())
 
     def add_err_rank(self, rank):
         self.err_rank.append(rank)
