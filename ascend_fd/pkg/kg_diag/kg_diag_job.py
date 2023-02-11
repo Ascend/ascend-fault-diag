@@ -7,7 +7,7 @@ import re
 import subprocess
 import tarfile
 
-from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError
+from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError, FileOpenError
 from ascend_fd.tool import safe_open, safe_chmod
 from ascend_fd.pkg.kg_diag.root_cause_zh import RootCauseZhTranslater
 
@@ -97,6 +97,10 @@ def get_kg_input_zip(rc_worker_id, parsed_data):
     if not file_name:
         kg_logger.error(f'ascend-kg-parser.json is not exist in worker-{rc_worker_id}')
         raise FileNotExistError(f'ascend-kg-parser.json is not exist in worker-{rc_worker_id}')
+
+    if os.path.islink(file_name):
+        kg_logger.error(f'ascend_kg_parser.json should not be a symbolic link file')
+        raise FileOpenError(f'ascend_kg_parser.json should not be a symbolic link file')
 
     dir_path = os.path.dirname(file_name)
     tarfile_name = os.path.join(dir_path, "ascend-kg-parser.tar.gz")
