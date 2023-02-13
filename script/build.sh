@@ -25,7 +25,7 @@ function clear() {
 }
 
 function check_result() {
-    re=$?
+    ret=$?
     message=$1
 
     if [ $ret -eq 0 ]; then
