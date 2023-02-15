@@ -1,0 +1,10 @@
+coverage
+dataclasses
+mock
+pytest
+pytest-cov
+pytest-mock
+pytest-html
+xunitmerge==1.0.3
+virtualenv
+pexpect
