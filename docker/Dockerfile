@@ -7,7 +7,7 @@ RUN useradd -d /home/ma-user -u 1000 -m -s /bin/bash ma-user
 RUN cp -a /etc/apt/sources.list /etc/apt/sources.list.bak && \
     sed -i "s@http://.*.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list && \
     apt update && \
-    apt install python3.8 python3-pip-y
+    apt install python3.8 python3-pip -y
 
 RUN pip3 config set global.index-url https://mirrors.huaweicloud.com/repository/pypi/simple
 
@@ -15,7 +15,7 @@ RUN mkdir /home/ma-user/job && chown ma-user:ma-user -R /home/ma-user/job
 
 COPY --chown=ma-user:ma-user . /home/ma-user/job
 
-RUN cd /home/ma-user/jobn/py && pip3 install *.whl
+RUN cd /home/ma-user/job/py && pip3 install *.whl
 
 RUN cd /home/ma-user/job/jre && \
     tar -zxvf jre-*.tar.gz

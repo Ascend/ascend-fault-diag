@@ -8,6 +8,10 @@ from ascend_fd.tool import safe_open, safe_chmod
 from ascend_fd.status import InnerError
 
 
+TIME_MAX_DIFF = 30 * 60
+MAX_EVENT_COUNT = 30
+
+
 class BMCLogDataDescriptor:
     VALID_FLAGS = {
         "parse_next",
@@ -35,9 +39,7 @@ class BMCLogDataDescriptor:
             if item in ["RaiseTime", "alarmRaisedTime", "keyinfo"]:
                 continue
             else:
-                if event[item] == next_event[item]:
-                    continue
-                else:
+                if event[item] != next_event[item]:
                     return False
         return True
 
@@ -51,11 +53,11 @@ class BMCLogDataDescriptor:
         for name, val in desc.items():
             if name == "events":
                 self.update_events(val)
-            elif name in self.VALID_FLAGS:
-                pass
-            else:
-                logger.error(f"can not find a update method for {name}.")
-                raise InnerError(f"can not find a update method for {name}.")
+                continue
+            if name in self.VALID_FLAGS:
+                continue
+            logger.error(f"can not find a update method for {name}.")
+            raise InnerError(f"can not find a update method for {name}.")
 
     # 增加 训练任务异常退出(TheTrainingTaskExitsAbnormally)事件
     def add_atlas_virtual_event(self, event_list: list):
@@ -66,7 +68,7 @@ class BMCLogDataDescriptor:
             if event_keyname_list:
                 raise_time = event_keyname_list[0].get("RaiseTime", None)
                 break
-        # 没有找到atlas相关的故障事件则不增加virtual_event_list事件
+        # If no ATLAS-related fault events are found, the virtual_event_list events are not added.
         if raise_time == "false":
             return
         virtual_event_list = ["TheTrainingTaskExitsAbnormally", "RuntimeFaulty", "FailedToRestartTheProcess",
@@ -91,8 +93,6 @@ class BMCLogDataDescriptor:
             entity_keyname = "%s_list" % entity_name
             if entity_keyname not in self.data:
                 entity_dict = dict()
-                if entity_keyname == "OS_list":
-                    entity_dict["type"] = "OS"
                 if entity_keyname == "NPU_list":
                     entity_dict["board_id"] = "Board1-Board2"
                     entity_dict["npu_id"] = "NPU1-NPU8"
@@ -122,35 +122,35 @@ class BMCLogDataDescriptor:
                 self.data.setdefault(entity_keyname, []).append(entity_dict)
 
     def merge_same_entity(self, entities):
+        if len(entities) == 1:
+            entities[0]["times"] = 1
+            return entities
+
         entities.sort(key=lambda x: x["RaiseTime"])
-        now_length = len(entities)
-        for index in range(now_length):
-            try:
-                pre_event_dict = entities[index]
-            except IndexError:
-                break
-            if "RaiseTime" in pre_event_dict:
-                pre_time_stamp = self.get_time_stamp(pre_event_dict)
-                count = 1
-                while count < 30:
-                    try:
-                        next_event_dict = entities[index + 1]
-                    except IndexError:
-                        break
-                    if self.judge_same_event(pre_event_dict, next_event_dict):
-                        next_time_stamp = self.get_time_stamp(next_event_dict)
-                        timing_variance = next_time_stamp - pre_time_stamp
-                        if timing_variance < 30 * 60:
-                            del entities[index + 1]
-                            count += 1
-                        else:
-                            break
-                    else:
-                        index += 1
-                        continue
+        reduced_entities = []
+
+        pre_event_dict = entities[0]
+        pre_time_stamp = self.get_time_stamp(pre_event_dict)
+        count = 1
+        for index, event_dict in enumerate(entities[1:]):
+            now_time_stamp = self.get_time_stamp(event_dict)
+            timing_difference = now_time_stamp - pre_time_stamp
+            if not self.judge_same_event(pre_event_dict, event_dict) or \
+                    timing_difference > TIME_MAX_DIFF or count >= MAX_EVENT_COUNT:
                 pre_event_dict["times"] = str(count)
+                reduced_entities.append(pre_event_dict)
+                pre_event_dict = event_dict
+                pre_time_stamp = now_time_stamp
+                count = 1
             else:
-                continue
+                count += 1
+
+            # If it is the last element, it is appended directly into the list.
+            if index == len(entities[1:]) - 1:
+                pre_event_dict["times"] = str(count)
+                reduced_entities.append(pre_event_dict)
+
+        return reduced_entities
 
 
 class DataDescriptorOfNAIE(BMCLogDataDescriptor):
@@ -176,14 +176,11 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
         for item in desc:
             event = dict()
             event["keyinfo"] = item["key_info"]
-            if "f_time" in item:
-                event["RaiseTime"] = item["f_time"]
-            else:
-                event["RaiseTime"] = item["time"]
-            if "params" in item:
-                event.update(item["params"])
-            if "params1" in item:
-                event.update(item["params1"])
+            event["RaiseTime"] = item["time"]
+            if "param0" in item:
+                event.update(item["param0"])
+            if "param1" in item:
+                event.update(item["param1"])
             event["name"] = item["event_type"]
             event["typeName"] = "%s_Alarm" % item["event_type"]
             event["alarmRaisedTime"] = event.get("RaiseTime")
@@ -196,12 +193,15 @@ class DataDescriptorOfNAIE(BMCLogDataDescriptor):
     def dump_to_json_file(self, file_path: str):
         self.add_atlas_virtual_event(self.ATLAS_EVENT_NAMES)
         count = 1
-        for _, entities in self.data.items():
-            self.merge_same_entity(entities)
-            for event in entities:
+        merge_data = dict()
+        for key_name, entities in self.data.items():
+            merge_entities = self.merge_same_entity(entities)
+            for event in merge_entities:
                 event["serialNo"] = "key%d" % count
                 event["_id"] = "key%d" % count
                 count += 1
+            merge_data.update({key_name: merge_entities})
+        self.data = merge_data
         self.add_not_existed_parts(self.ENTITY_PART_NAMES)
         with safe_open(file_path, "w", encoding="utf-8") as f_dump:
             f_dump.write(self.__str__())

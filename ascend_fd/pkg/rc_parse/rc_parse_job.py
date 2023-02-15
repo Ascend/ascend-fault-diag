@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-# Copyright(C) Huawei Technologies Co.,Ltd. 2022. ALL rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. ALL rights reserved.
 import logging
 import os
 import re
@@ -26,7 +26,8 @@ def start_rc_parse_job(output_path, cfg):
     :param output_path: the parsed data output path
     :param cfg: parse config
     """
-    plog_files_dict = cfg.get("plog_path", None)
+    plog_files_dict = cfg.plog_path
+
     plog_files = list()
     for plog_list in plog_files_dict.values():
         debug_plog_heap, run_plog_heap = plog_list
@@ -87,14 +88,14 @@ def get_info_from_file(cate, in_file, out_file):
     if not rule:
         rc_logger.error(f"{cate} doesn't exist in PARSE_RULE")
         raise InnerError(f"{cate} doesn't exist in PARSE_RULE")
-    grep = popen_grep(rule, in_file)
+    grep = popen_grep(rule, file=in_file)
     logs = grep.stdout.readlines()
     if not logs:
         return is_write, is_error
     for line in logs:
         is_write = True
         with safe_open(out_file, "a+") as out:
-            out.write(line.decode())
+            out.write(line)
     if cate == "error":
         is_error = True
 

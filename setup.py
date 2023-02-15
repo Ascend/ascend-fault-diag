@@ -4,10 +4,18 @@ import shutil
 from pathlib import Path
 from setuptools import setup, find_packages
 
+from ascend_fd.tool import safe_open, VERSION_FILE_READ_LIMIT
+
+DEFAULT_VERSION = "5.0.RC1"
+
 
 def get_version():
-    from ascend_fd.cli.cli import VERSION
-    return VERSION
+    src_path = Path(__file__).absolute().parent
+    verison_file = src_path.joinpath('ascend_fd', 'Version.info')
+    if not verison_file.exists():
+        return DEFAULT_VERSION
+    with safe_open(verison_file, 'r') as f:
+        return f.read(VERSION_FILE_READ_LIMIT)
 
 
 def clean():
@@ -16,6 +24,7 @@ def clean():
         for folder in Path().glob(pattern):
             if folder.exists():
                 shutil.rmtree(folder)
+
 
 clean()
 setup(

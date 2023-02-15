@@ -1,5 +1,5 @@
-#!/user/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding:utf-8 -*-
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
 import re
 import math
@@ -12,31 +12,30 @@ from ascend_fd.pkg.kg_parse.utils.log_record import logger
 
 # 文件行数大于LINE_NUM则开启多进程解析
 LINE_NUM = 50000
-MAX_PROCESS_NUM = 10
+WARN_PROCESS_NUM = 10
 
 
 class LineParser:
-    """每一行的解析器"""
+    """single line parse"""
     def __init__(self, name, regex, file_filter=None,
-                 parm_regex=None, parm_dict_func=None,
-                 parm_regex1=None, parm_dict_func1=None,
+                 module_regex=None, module_dict_func=None,
                  keywords=None):
         self.name = name
         self.regex = regex
         self.file_filter = file_filter
-        self.parm_regex = parm_regex
-        self.parm_dict_func = parm_dict_func
-        self.parm_regex1 = parm_regex1
-        self.parm_dict_func1 = parm_dict_func1
+        self.module_regex = module_regex
+        self.module_dict_func = module_dict_func
         self.keywords = keywords
 
     def parse(self, desc, file_path):
-        """解析方法"""
         event_dict = dict()
-        if self.file_filter is not None and self.file_filter not in file_path:
+        if not self.line_check(desc) or (self.file_filter is not None and self.file_filter not in file_path):
             return event_dict
+
         ret = self.regex.findall(desc)
         if ret:
+            # Log format, eg. "[ERROR] RUNTIME(python3):2023-02-08-14:03:57.xxx"
+            # Parsing "time" format, eg. "2023-02-08 14:03:57"
             time = desc[desc.index(":") + 1:]
             time = time[0:time.index(".")]
             delete_char_index = time.rindex("-")
@@ -46,35 +45,21 @@ class LineParser:
             event_dict["time"] = time
 
             event_dict["event_type"] = self.name
-            if self.parm_regex is not None:
-                ret = self.parm_regex.findall(file_path)
+            if self.module_regex is not None:
+                ret = self.module_regex.findall(file_path)
                 if ret:
-                    params = self.parm_dict_func(ret[0])
-                    event_dict["params"] = params
-            if self.parm_regex1 is not None:
-                ret = self.parm_regex1.findall(desc)
-                if ret:
-                    params = self.parm_dict_func1(ret[0])
-                    event_dict["params1"] = params
+                    module = self.module_dict_func(ret[0])
+                    event_dict["param0"] = module
         return event_dict
-
-    def file_check(self, file_path):
-        if self.parm_regex is None:
-            return True
-        ret = self.parm_regex.findall(file_path)
-        if ret:
-            return True
-        return False
 
     def line_check(self, line):
         keyword_num = 0
         for keyword in self.keywords:
             if keyword not in line:
-                break
+                return False
             keyword_num += 1
-        if keyword_num != len(self.keywords):
-            return False
-        return True
+
+        return keyword_num == len(self.keywords)
 
 
 class PlogParser(BMCLogFileParser):
@@ -85,56 +70,56 @@ class PlogParser(BMCLogFileParser):
                    regex=re.compile(
                        r".*?(ReportExceptProc:task exception).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(RUNTIME)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(RUNTIME)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["ReportExceptProc:task exception"],
                    ),
         LineParser(name="RuntimeAicoreError",
                    regex=re.compile(
                        r".*?(device\(\d+\)).*?(aicore error).*?(error code = 0x800000).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(RUNTIME)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(RUNTIME)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["device", "aicore error", "error code = 0x800000"],
                    ),
         LineParser(name="RuntimeModelExecuteTaskFailed",
                    regex=re.compile(
                        r".*?(model execute task failed, device_id=\d+).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(RUNTIME)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(RUNTIME)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["model execute task failed, device_id="],
                    ),
         LineParser(name="RuntimeAicoreKernelExecuteFailed",
                    regex=re.compile(
                        r".*?(aicore kernel execute failed, device_id=\d+).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(RUNTIME)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(RUNTIME)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["aicore kernel execute failed, device_id="],
                    ),
         LineParser(name="RuntimeStreamSyncFailed",
                    regex=re.compile(
                        r".*?(Stream Synchronize failed).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(RUNTIME)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(RUNTIME)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["Stream Synchronize failed"],
                    ),
         LineParser(name="GEModelStreamSyncFailed",
                    regex=re.compile(
                        r".*?(Model stream sync failed).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(GE)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(GE)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["Model stream sync failed"],
                    ),
         LineParser(name="GERunModelFail",
                    regex=re.compile(
                        r".*?(Run model fail).*?"),
                    file_filter="plog",
-                   parm_regex1=re.compile(r"(GE)"),
-                   parm_dict_func1=lambda p: {"module": p.replace(" ", "")},
+                   module_regex=re.compile(r"(GE)"),
+                   module_dict_func=lambda p: {"module": p.replace(" ", "")},
                    keywords=["Run model fail"],
                    ),
         LineParser(name="FailedToApplyForResources",
@@ -151,9 +136,9 @@ class PlogParser(BMCLogFileParser):
                    ),
         LineParser(name="FailedToexecuteTheAICoreOperator",
                    regex=re.compile(
-                       r".*?PrintErrorInfo.*?fault kernel_name.*?func_name.*?"),
+                       r".*?fault kernel_name.*?func_name.*?"),
                    file_filter="plog",
-                   keywords=["PrintErrorInfo", "fault kernel_name", "func_name"],
+                   keywords=["fault kernel_name", "func_name"],
                    ),
         LineParser(name="ExecuteModelFailed",
                    regex=re.compile(
@@ -207,13 +192,11 @@ class PlogParser(BMCLogFileParser):
                 results.append(pool.apply_async(self.handle_parse, args=(lines, file_path)))
                 pool.close()
             else:
-                if LINE_NUM != 0:
-                    process_num = math.ceil(len(lines) / LINE_NUM)
-                else:
-                    process_num = MAX_PROCESS_NUM
-                logger.info("len(lines): %d", len(lines))
-                logger.info("process_num: %d", process_num)
-                pool = Pool(min(process_num, MAX_PROCESS_NUM))
+                process_num = math.ceil(len(lines) / LINE_NUM)
+                if process_num > WARN_PROCESS_NUM:
+                    logger.warning(f"the {os.path.basename(file_path)} is too large and the number of open processes "
+                                   f"is {process_num}, exceeds the warning value {WARN_PROCESS_NUM}.")
+                pool = Pool(process_num)
                 for i in range(0, process_num):
                     start_index = i * LINE_NUM
                     end_index = min(start_index + LINE_NUM, len(lines))
@@ -233,22 +216,16 @@ class PlogParser(BMCLogFileParser):
 
     def handle_parse(self, lines, file_path):
         parser_results = []
-        matched = [0 for _ in range(len(lines))]
+        matched = [False for _ in range(len(lines))]
         for line_parser in self.LINE_PARSERS:
-            if not line_parser.file_check(file_path):
-                continue
             for index, line in enumerate(lines):
-                if matched[index] == 1:
+                if matched[index]:
                     continue
                 line = line.strip()
-                """ts.txt可能存在\00字符，导致循环无法退出"""
-                line = line.replace('\00', '')
-
-                if not line_parser.line_check(line):
-                    continue
+                line = line.replace('\00', '')  # Txt log file may have \00, it will make the loop impossible to exit.
 
                 event_dict = line_parser.parse(line, file_path)
                 if event_dict:
-                    matched[index] = 1
+                    matched[index] = True
                     parser_results.append(event_dict)
         return parser_results

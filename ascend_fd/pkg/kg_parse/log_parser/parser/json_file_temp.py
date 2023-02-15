@@ -12,8 +12,8 @@ class SingleJsonFileProcessing:
     """single json file process class"""
     RESULT_FILE = "ascend-kg-parser.json"
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, log_path):
+        self.log_path = log_path
 
     def export_json_file(self, result_path):
         """
@@ -24,7 +24,7 @@ class SingleJsonFileProcessing:
         if not os.path.isdir(result_path):
             logger.error(f"result path {os.path.basename(result_path)} not found.")
             raise FileNotExistError(f"result path {os.path.basename(result_path)} not found.")
-        package_parser = BMCLogPackageParser(self.config)
+        package_parser = BMCLogPackageParser(self.log_path)
         logger.info("____start parse____")
         package_parser.parse()
         logger.info("____end parse____")

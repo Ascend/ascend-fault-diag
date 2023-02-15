@@ -1,16 +1,30 @@
-# coding: UTF-8
-# Copyright (c) 2022. Huawei Technologies Co., Ltd. ALL rights reserved.
+# -*- coding:utf-8 -*-
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
 import re
 import heapq
 import json
 import multiprocessing
+from dataclasses import dataclass
 
 from ascend_fd.tool import safe_open
 from ascend_fd import regular_rule
-from ascend_fd.status import BaseError, InfoNotFoundError
+from ascend_fd.status import BaseError, PathError
 from ascend_fd.log import init_main_logger, LOG_WIDTH
 from ascend_fd.controller.job_worker import RcParser, KgParser, KgDiagnoser
+
+
+@dataclass
+class ParseCFG:
+    plog_path: dict
+    npu_info_path: list
+    worker_id: str
+
+
+@dataclass
+class DiagCFG:
+    mode: int
+    parse_data: dict
 
 
 class ParseController:
@@ -21,27 +35,25 @@ class ParseController:
     OUT_DIR = "fault_diag_data"
 
     def __init__(self, args):
-        self.cfg = self.init_config(args.input_path)
+        self.cfg = self.init_cfg(args.input_path)
         self.input_path = args.input_path
         self.output_path = self.generate_output_path(args.output_path)
         self.logger = init_main_logger(self.output_path)
         self.parsers = self.generate_parser()
 
     @staticmethod
-    def init_config(input_path):
+    def init_cfg(input_path):
         """
         init parse config. The config dict contains three parts:
-        {
         plog_path: {PID: [[], []]}, (each PID corresponds to two lists of plogs--debug folder and run folder)
         npu_info_path: [],
         worker_id: "",
-        }
         :param input_path: the origin log data path
         :return: parse config dict
         """
         plog_path = dict()
         npu_info_path = list()
-        worker_id = ""
+        worker_id = "0"
         for root, _, files in os.walk(input_path):
             for file in files:
                 file_path = os.path.join(root, file)
@@ -52,6 +64,7 @@ class ParseController:
                     elif os.path.basename(os.path.dirname(root)) == "run":
                         heapq.heappush(plog_path.setdefault(pid, [[], []])[1], file_path)
                     continue
+
                 if re.match(regular_rule.NPU_INFO_RE, file) and \
                         re.match(regular_rule.WORKER_DIR_RE, os.path.basename(root)) \
                         and os.path.basename(os.path.dirname(root)) == "environment_check":
@@ -62,11 +75,7 @@ class ParseController:
                 if worker_re:
                     worker_id = worker_re[1]
 
-        return {
-            "plog_path": plog_path,
-            "npu_info_path": npu_info_path,
-            "worker_id": worker_id
-        }
+        return ParseCFG(plog_path, npu_info_path, worker_id)
 
     def start_job(self):
         """
@@ -115,10 +124,12 @@ class ParseController:
         :param output_path: the specified output path
         :return: the final output dir path
         """
-        worker_id = self.cfg.get("worker_id", None)
-        if not worker_id:
-            raise InfoNotFoundError("cannot find worker id, please check whether the input path is correct.")
-        output_path = os.path.join(output_path, self.OUT_DIR, f"worker-{worker_id}")
+        worker_id = self.cfg.worker_id
+        output_path = os.path.join(output_path, self.OUT_DIR)
+        if os.path.exists(output_path) and os.listdir(output_path):
+            raise PathError("the output path already has a fault_diag_data folder that is not empty.")
+
+        output_path = os.path.join(output_path, f"worker-{worker_id}")
         os.makedirs(output_path, 0o700, exist_ok=True)
         return output_path
 
@@ -147,8 +158,7 @@ class DiagController:
     @staticmethod
     def init_cfg(input_path, mode):
         """
-        init diag config. The config dict contains two parts:
-        {
+        init diag config. The config contains two parts:
         mode: "0/1",
         parse_data:
             {worker_id:
@@ -157,7 +167,6 @@ class DiagController:
                 kg_parse_path: "",
                 },
             },
-        }
         :param input_path: the parsed log data path
         :param mode: scene mode
         :return: diag config dict
@@ -187,10 +196,7 @@ class DiagController:
                 }
             })
 
-        return {
-            "mode": mode,
-            "parse_data": parse_data
-        }
+        return DiagCFG(mode, parse_data)
 
     def start_job(self):
         """

@@ -7,39 +7,38 @@ from ascend_fd.status import InnerError
 
 
 class BMCLogPackageParser(object):
-    """日志包解析类"""
+    """log parser base class"""
     VALID_PARAMS = {
         "package_repo_prefix": None,
         BMCLogFileParser.__name__: BMCLogFileParser.VALID_PARAMS,
         NpuInfoParser.__name__: NpuInfoParser.VALID_PARAMS,
     }
 
-    def __init__(self, configs: dict = None):
+    def __init__(self, log_path_dict):
         super(BMCLogPackageParser, self).__init__()
-        if configs is not None:
-            self.configs = configs
-        else:
-            self.configs = dict()
-        self.desc = DataDescriptorOfNAIE()
+        self.file_dict = log_path_dict
 
         self.parsers = list()
-        self.file_dict = configs.get("log_path", {})
-        # 添加解析器
+        self.desc = DataDescriptorOfNAIE()
+
         self.add_parser(PlogParser)
         self.add_parser(NpuInfoParser)
 
     def add_parser(self, parser_cls):
-        """添加解析器类"""
+        """add parser class object"""
         if not issubclass(parser_cls, BMCLogFileParser):
             logger.error("'parser_cls' must be sub-class of BMCLogFileParser")
             raise InnerError("'parser_cls' must be sub-class of BMCLogFileParser")
         self.parsers.append(parser_cls())
 
     def parse(self):
-        """解析方法"""
-        self.desc.clear()
         for parser in self.parsers:
             files = parser.find_log(self.file_dict)
+            if not files:
+                logger.warning(f"don't find the origin file for parser {parser.__class__.__name__}")
+                continue
+
+            # NpuInfoParser only parse two file, "npu_info_before.txt" and "npu_info_after.txt"
             if isinstance(parser, NpuInfoParser):
                 res = parser.parse(files)
                 if res:
@@ -58,5 +57,5 @@ class BMCLogPackageParser(object):
                     break
 
     def get_log_data_descriptor(self):
-        """返回当前log_data_descriptor实例"""
+        """return log_data_descriptor instance"""
         return self.desc

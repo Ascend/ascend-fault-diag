@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-# Copyright(C) Huawei Technologies Co.,Ltd. 2022. All rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 from ascend_fd.status import FileNotExistError
 from ascend_fd.pkg.kg_parse.utils import logger
 from ascend_fd.pkg.kg_parse.log_parser import SingleJsonFileProcessing
@@ -16,9 +16,8 @@ def start_kg_parse_job(output_path, files_path_dict):
     if not log_path:
         raise FileNotExistError("no log file that meets the path specifications is found.")
 
-    config = {"log_path": log_path}
     logger.info("init json file processing")
-    worker = SingleJsonFileProcessing(config)
+    worker = SingleJsonFileProcessing(log_path)
     logger.info("start parse kg data")
     worker.export_json_file(output_path)
 
@@ -28,8 +27,8 @@ def get_file_list(files_path_dict):
     generate plog files list and env check files for kg parse.
     """
     log_file = dict()
-    if files_path_dict.get("plog_path", None):
-        plog_files_dict = files_path_dict.get("plog_path")
+    if files_path_dict.plog_path:
+        plog_files_dict = files_path_dict.plog_path
         plog_path = []
         for plog_list in plog_files_dict.values():
             for heap in plog_list:
@@ -39,8 +38,8 @@ def get_file_list(files_path_dict):
         log_file.update({
             "plog_path": plog_path
         })
-    if files_path_dict.get("npu_info_path", None):
+    if files_path_dict.npu_info_path:
         log_file.update({
-            "npu_info_path": files_path_dict.get("npu_info_path")
+            "npu_info_path": files_path_dict.npu_info_path
         })
     return log_file

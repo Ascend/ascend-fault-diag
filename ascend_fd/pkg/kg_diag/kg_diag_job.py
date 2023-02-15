@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-# Copyright(C) Huawei Technologies Co.,Ltd. 2022. All rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import json
 import os
 import logging
@@ -7,9 +7,9 @@ import re
 import subprocess
 import tarfile
 
-from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError
+from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError, FileOpenError
 from ascend_fd.tool import safe_open, safe_chmod
-
+from ascend_fd.pkg.kg_diag.root_cause_zh import RootCauseZhTranslater
 
 kg_logger = logging.getLogger("kg_diag")
 PWD_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -21,9 +21,9 @@ MAX_WORKER_NUM = 5
 def start_kg_diag_job(output_path, worker_list, cfg):
     kg_result = dict()
     kg_relation = dict()
-    cfg = cfg.get("parse_data", {})
+    parsed_data = cfg.parse_data
     for worker_id in worker_list:
-        result_json, relation_json = kg_diag_job(worker_id, cfg)
+        result_json, relation_json = kg_diag_job(worker_id, parsed_data)
         kg_result.update(result_json)
         kg_relation.update(relation_json)
 
@@ -36,33 +36,49 @@ def start_kg_diag_job(output_path, worker_list, cfg):
     return kg_result
 
 
-def kg_diag_job(worker_id, cfg):
+def kg_diag_job(worker_id, parsed_data):
     kg_logger.info(f"start knowledge graph diagnosis task for worker-{worker_id}.")
     java_path = get_java_env()
-    input_json_zip = get_kg_input_zip(worker_id, cfg)
+    input_json_zip = get_kg_input_zip(worker_id, parsed_data)
 
     sub_res = subprocess.run([java_path, "-Xms128m", "-Xmx128m", "-jar", KG_JAR_PATH, KG_REPO, input_json_zip],
-                              capture_output=True, shell=False)
-    result_find = re.search(r"{(\"analyze_success.*?)}$", sub_res.stdout.decode())
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding="utf-8")
+    result_find = re.compile(r"{.*?analyze_success.*?}$").findall(sub_res.stdout)
     os.remove(input_json_zip)
 
     if not result_find:
-        kg_logger.error(f"the kg-engine analyze worker-{worker_id} error, "
-                        f"the analysis results in the corresponding format is not found.")
-        raise InfoNotFoundError(f"the analysis results in the corresponding format "
-                                f"is not found for worker-{worker_id}.")
+        engine_err = sub_res.stderr
+        kg_logger.error(f"the kg-engine analyze worker-{worker_id} failed. The reason is: {engine_err}")
+        raise InfoNotFoundError(f"the kg-engine analyze worker-{worker_id} failed. Please check the detail log.")
 
-    result_str = "{" + result_find[1] + "}"
-    diag_json = json.loads(result_str)
-    if diag_json.get("fault_chain", None):
-        diag_json["fault_chain"] = json.loads(diag_json["fault_chain"])
+    result_str = result_find[0]  # only match one reasoning result
+    return diag_json_wrapper(result_str, worker_id)
 
+
+def diag_json_wrapper(result_str, worker_id):
+    result_json = {
+        "analyze_success": None,
+        "engine_ver": None,
+        "root_cause_zh_CN": None,
+        "root_cause_en_US": None,
+        "rlt_graph": None
+    }
     relation_json = dict()
-    if diag_json.get("fault_chain", None):
-        relation_json["rlt_graph"] = json.loads(diag_json["rlt_graph"])
+
+    diag_json = json.loads(result_str)
+    for key in result_json:
+        if key == "rlt_graph":
+            relation_json["rlt_graph"] = json.loads(diag_json["rlt_graph"])
+        result_json[key] = diag_json.get(key, None)
+
+    root_cause_en = result_json.get("root_cause_en_US", None)
+    if root_cause_en:
+        result_json["root_cause_zh_CN"] = RootCauseZhTranslater.get_root_cause_zh(root_cause_en)
+    else:
+        result_json["root_cause_zh_CN"] = ""
 
     result_json = {
-        f"worker-{worker_id}": diag_json
+        f"worker-{worker_id}": result_json
     }
     relation_json = {
         f"worker-{worker_id}": relation_json
@@ -71,8 +87,8 @@ def kg_diag_job(worker_id, cfg):
     return result_json, relation_json
 
 
-def get_kg_input_zip(rc_worker_id, cfg):
-    worker_parse_data = cfg.get(f'worker-{rc_worker_id}')
+def get_kg_input_zip(rc_worker_id, parsed_data):
+    worker_parse_data = parsed_data.get(f'worker-{rc_worker_id}')
     if not worker_parse_data:
         kg_logger.error(f'worker-{rc_worker_id} dir is not exist')
         raise FileNotExistError(f'worker-{rc_worker_id} dir is not exist')
@@ -81,6 +97,10 @@ def get_kg_input_zip(rc_worker_id, cfg):
     if not file_name:
         kg_logger.error(f'ascend-kg-parser.json is not exist in worker-{rc_worker_id}')
         raise FileNotExistError(f'ascend-kg-parser.json is not exist in worker-{rc_worker_id}')
+
+    if os.path.islink(file_name):
+        kg_logger.error(f'ascend_kg_parser.json should not be a symbolic link file')
+        raise FileOpenError(f'ascend_kg_parser.json should not be a symbolic link file')
 
     dir_path = os.path.dirname(file_name)
     tarfile_name = os.path.join(dir_path, "ascend-kg-parser.tar.gz")
