@@ -65,7 +65,16 @@ def popen_grep(rule, file=None, stdin=None, stdout=subprocess.PIPE, stderr=subpr
     :param stderr: the popen stderr, default PIPE
     :return: popen instance
     """
-    cmd_list = ["/usr/bin/grep", rule]
+    grep_file_list = ["/usr/bin/grep", "/bin/grep"]
+    cmd_list = []
+    for path in grep_file_list:
+        if os.path.exists(path):
+            cmd_list.append(path)
+            break
+    if len(cmd_list) == 0:
+        raise FileNotExistError("The 'grep' program does not exist.")
+
+    cmd_list.append(rule)
     if file:
         with safe_open(file) as file_stream:
             return subprocess.Popen(cmd_list, shell=False, stdin=file_stream,
