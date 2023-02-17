@@ -53,6 +53,11 @@ class ParamError(BaseError):
     description = "ParamError."
 
 
+class SpaceError(BaseError):
+    code = 509
+    description = "No space in the work dir."
+
+
 class SuccessRet:
     code = 200
     description = "Successful operation."

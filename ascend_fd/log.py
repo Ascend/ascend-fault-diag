@@ -1,8 +1,11 @@
 # -*- coding:utf-8 -*-
 # Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
+import sys
 import logging
 import logging.handlers
+
+from ascend_fd.status import SpaceError
 
 
 LOG_WIDTH = 100
@@ -25,6 +28,12 @@ class MyRotatingFileHandler(logging.handlers.RotatingFileHandler):
         finally:
             logging.handlers.RotatingFileHandler.doRollover(self)
             os.chmod(self.baseFilename, mode=0o640)
+
+    def handleError(self, record):
+        t, _, _ = sys.exc_info()
+        if isinstance(t(), (OSError, SpaceError)):
+            raise SpaceError("no enough space when logging")
+        logging.handlers.RotatingFileHandler.handleError(self, record)
 
 
 def init_job_logger(output_path, log_name):

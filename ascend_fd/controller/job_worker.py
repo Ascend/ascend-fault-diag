@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 from ascend_fd.log import init_job_logger
-from ascend_fd.status import BaseError, SuccessRet, InnerError
+from ascend_fd.status import BaseError, SuccessRet, InnerError, SpaceError
 from ascend_fd.pkg import (start_rc_parse_job, start_kg_parse_job,
                            start_rc_diag_job, start_kg_diag_job)
 
@@ -29,6 +29,8 @@ class BaseWorker:
             result = self._job()
         except BaseError as err:
             return err, self.JOB_NAME, self.err_result
+        except OSError:
+            return SpaceError(f"no enough space when {self.JOB_NAME} working"), self.JOB_NAME, self.err_result
         except Exception as err:
             self.log.error("An inner error occurred: %s.", err)
             return InnerError(), self.JOB_NAME, self.err_result
