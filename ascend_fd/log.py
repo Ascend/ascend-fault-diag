@@ -5,8 +5,6 @@ import sys
 import logging
 import logging.handlers
 
-from ascend_fd.status import SpaceError
-
 
 LOG_WIDTH = 100
 LOG_MAX_SIZE = 10 * 1024 * 1024
@@ -30,9 +28,11 @@ class MyRotatingFileHandler(logging.handlers.RotatingFileHandler):
             os.chmod(self.baseFilename, mode=0o640)
 
     def handleError(self, record):
-        t, _, _ = sys.exc_info()
-        if isinstance(t(), (OSError, SpaceError)):
-            raise SpaceError("no enough space when logging")
+        t, v, _ = sys.exc_info()
+        # t is the Error class
+        # v is the Error value
+        if t == OSError:
+            raise t(v)
         logging.handlers.RotatingFileHandler.handleError(self, record)
 
 
