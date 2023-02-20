@@ -7,7 +7,7 @@ CUR_PATH=$(cd "$(dirname "$0")" || exit; pwd)
 ROOT_PATH=$(readlink -f "$CUR_PATH"/..)
 
 OUTPUT_PATH="${ROOT_PATH}/output"
-DT_RESULT_PATH = "${ROOT_PATH}/DT"
+DT_RESULT_PATH="${ROOT_PATH}/DT"
 DT_RESULT_COV_DIR="${DT_RESULT_PATH}/cov_data"
 DT_RESULT_XML_DIR="${DT_RESULT_PATH}/xmls"
 DT_RESULT_HTMLS_DIR="${DT_RESULT_PATH}/htmls"
@@ -18,7 +18,7 @@ ASCEND_FD_DT_REQUIREMENTS_FILE_PATH="${CUR_PATH}/requirements.txt"
 
 function run_tests_of_ascend_fd() {
   python3 -m pip install virtualenv
-  python3 0m virtualenv -p "$(which python3)" "${ASCEND_FD_VENV_DIR}"
+  python3 -m virtualenv -p "$(which python3)" "${ASCEND_FD_VENV_DIR}"
   source ${ASCEND_FD_VENV_DIR}/bin/activate
 
   pip install -r "${ROOT_PATH}/requirements.txt"
@@ -55,7 +55,5 @@ function main() {
   pwd
 }
 
-start="$(data +%s)"
 main
-end="$(data +%s)"
 echo "DT running took :$(expr "$end" - "$start")" seconds
