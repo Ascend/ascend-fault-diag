@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 # Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
+import sys
 import logging
 import logging.handlers
 
@@ -25,6 +26,14 @@ class MyRotatingFileHandler(logging.handlers.RotatingFileHandler):
         finally:
             logging.handlers.RotatingFileHandler.doRollover(self)
             os.chmod(self.baseFilename, mode=0o640)
+
+    def handleError(self, record):
+        t, v, _ = sys.exc_info()
+        # t is the Error class
+        # v is the Error value
+        if t == OSError:
+            raise t(v)
+        logging.handlers.RotatingFileHandler.handleError(self, record)
 
 
 def init_job_logger(output_path, log_name):

@@ -31,7 +31,7 @@ class BaseWorker:
             return err, self.JOB_NAME, self.err_result
         except Exception as err:
             self.log.error("An inner error occurred: %s.", err)
-            return InnerError(), self.JOB_NAME, self.err_result
+            return InnerError(err), self.JOB_NAME, self.err_result
         else:
             self.log.info(f"{self.JOB_NAME} succeeded.")
             return SuccessRet(), self.JOB_NAME, result
