@@ -16,7 +16,7 @@ class RootCauseZhTranslater:
         "FailedToApplyForResources_Alarm": "资源申请失败",
         "RegisteredResourcesExceedsTheMaximum_Alarm": "注册资源超过最大值失败",
         "FailedToexecuteTheAICoreOperator_Alarm": "AI Core算子执行失败",
-        "ExecuteModelFailed": "执行模型失败",
+        "ExecuteModelFailed_Alarm": "执行模型失败",
         "FailedToexecuteTheAICpuOperator_Alarm": "AI Cpu算子执行失败",
         "MemoryAsyncCopyFailed_Alarm": "Memcpy异步拷贝算子执行失败",
         "NotifyWaitExecuteFailed_Alarm": "Notify算子执行失败",
