@@ -30,12 +30,12 @@ def start_rc_parse_job(output_path, cfg):
 
     plog_files = list()
     for plog_list in plog_files_dict.values():
-        debug_plog_heap, run_plog_heap = plog_list
-        if len(debug_plog_heap) > PID_DEBUG_MAX_PLOG_NUM:
-            debug_plog_heap = debug_plog_heap[:1] + debug_plog_heap[-2:]
+        debug_or_rank_plog_heap, run_plog_heap = plog_list
+        if len(debug_or_rank_plog_heap) > PID_DEBUG_MAX_PLOG_NUM:
+            debug_or_rank_plog_heap = debug_or_rank_plog_heap[:1] + debug_or_rank_plog_heap[-2:]
         if len(run_plog_heap) > PID_RUN_MAX_PLOG_NUM:
             run_plog_heap = run_plog_heap[-2:]
-        plog_files.extend(debug_plog_heap)
+        plog_files.extend(debug_or_rank_plog_heap)
         plog_files.extend(run_plog_heap)
 
     if not plog_files:

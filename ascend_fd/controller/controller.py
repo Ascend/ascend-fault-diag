@@ -59,10 +59,16 @@ class ParseController:
                 file_path = os.path.join(root, file)
                 if re.match(regular_rule.PLOG_ORIGIN_RE, file) and os.path.basename(root) == "plog":
                     pid = re.match(regular_rule.PLOG_ORIGIN_RE, file)[1]
-                    if os.path.basename(os.path.dirname(root)) == "debug":
+                    # plog directory structure of C84 or later
+                    new_dirname_structure = ["debug", "run"]
+                    # plog directory structure of version earlier than C84
+                    old_dirname_structure = "rank_"
+                    dirname = os.path.basename(os.path.dirname(root))
+                    if dirname in new_dirname_structure:
+                        heapq.heappush(plog_path.setdefault(pid, [[], []])[new_dirname_structure.index(dirname)],
+                                       file_path)
+                    elif dirname.startswith(old_dirname_structure):
                         heapq.heappush(plog_path.setdefault(pid, [[], []])[0], file_path)
-                    elif os.path.basename(os.path.dirname(root)) == "run":
-                        heapq.heappush(plog_path.setdefault(pid, [[], []])[1], file_path)
                     continue
 
                 if re.match(regular_rule.NPU_INFO_RE, file) and \
