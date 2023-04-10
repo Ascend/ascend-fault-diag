@@ -1,11 +1,10 @@
 # -*- coding:utf-8 -*-
 # Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import argparse
-from pathlib import Path
 
 from ascend_fd.log import echo
+from ascend_fd.tool import get_version
 from ascend_fd.controller import router
-from ascend_fd.tool import safe_open, VERSION_FILE_READ_LIMIT
 
 
 def command_line():
@@ -48,10 +47,7 @@ def command_line():
 
 
 def show_version():
-    src_path = Path(__file__).absolute().parent.parent
-    version_file = src_path.joinpath("Version.info")
-    with safe_open(version_file, 'r') as f:
-        echo.info(f"ascend-fd v{f.read(VERSION_FILE_READ_LIMIT)}")
+    echo.info(f"ascend-fd v{get_version()}")
 
 
 def main():

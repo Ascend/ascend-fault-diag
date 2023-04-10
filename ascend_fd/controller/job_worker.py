@@ -74,14 +74,8 @@ class KgDiagnoser(BaseWorker):
     """
     JOB_NAME = "kg_diag"
     err_result = {
-        "Ascend-Rc-Worker-Rank-Analyze Result": {
-            "analyze_success": False,
-            "engine_ver": "v1.0.0"
-        },
-        "Ascend-Knowledge-Graph-Rank-Analyze Result": {
-            "analyze_success": False,
-            "engine_ver": "v1.0.0"
-        }
+        "Rc": {"analyze_success": False},
+        "Kg": {"analyze_success": False}
     }
 
     def _job(self):
@@ -91,13 +85,13 @@ class KgDiagnoser(BaseWorker):
         2. KG diag job: it will check each worker in the err worker list, and return the diag result.
         :return: the combined results of RC diag job and KG diag job
         """
-        result, worker_list = start_rc_diag_job(self.output, self.cfg)
-        self.err_result.update(result)
+        result, worker_list = start_rc_diag_job(self.cfg)
+        self.err_result["Rc"].update(result)
 
         if not worker_list:
             self.log.warning("the root cause node is not found, so the knowledge graph diag task is not started.")
             raise InnerError("the root cause node is not found, so the knowledge graph diag task is not started.")
 
-        kg_result = start_kg_diag_job(self.output, worker_list, self.cfg)
-        result.update(kg_result)
-        return result
+        kg_result = start_kg_diag_job(worker_list, self.cfg)
+        self.err_result["Kg"].update(kg_result)
+        return self.err_result

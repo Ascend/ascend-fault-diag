@@ -7,10 +7,11 @@ import json
 import multiprocessing
 from dataclasses import dataclass
 
-from ascend_fd.tool import safe_open
 from ascend_fd import regular_rule
+from ascend_fd.tool import safe_open
 from ascend_fd.status import BaseError, PathError
 from ascend_fd.log import init_main_logger, LOG_WIDTH
+from ascend_fd.controller.result_wrapper import TableWrapper, JsonWrapper
 from ascend_fd.controller.job_worker import RcParser, KgParser, KgDiagnoser
 
 
@@ -72,8 +73,8 @@ class ParseController:
                     continue
 
                 if re.match(regular_rule.NPU_INFO_RE, file) and \
-                        re.match(regular_rule.WORKER_DIR_RE, os.path.basename(root)) \
-                        and os.path.basename(os.path.dirname(root)) == "environment_check":
+                        re.match(regular_rule.WORKER_DIR_RE, os.path.basename(root)) and \
+                        os.path.basename(os.path.dirname(root)) == "environment_check":
                     npu_info_path.append(file_path)
                     continue
 
@@ -225,18 +226,14 @@ class DiagController:
         sort the diagnostic results and save results to output path.
         If print parameter is true, func will print the results.
         """
-        out_file = os.path.join(self.output_path, "all_diag_report.json")
-        save_result = {
-            "Ascend-RC-Worker-Rank-Analyze Result":
-                self.diag_results.get("Ascend-RC-Worker-Rank-Analyze Result"),
-            "Ascend-Knowledge-Graph-Fault-Diag Result":
-                self.diag_results.get("Ascend-Knowledge-Graph-Fault-Diag Result")
-        }
+        out_file = os.path.join(self.output_path, "diag_report.json")
+        json_wrapper = JsonWrapper(self.diag_results)
 
         with safe_open(out_file, "w+", encoding="utf-8") as file_stream:
-            file_stream.write(json.dumps(save_result, ensure_ascii=False, indent=4))
+            file_stream.write(json_wrapper.get_format_json())
         if self.is_print:
-            self.logger.info(json.dumps(save_result, ensure_ascii=False, indent=4))
+            table_wrapper = TableWrapper(self.diag_results)
+            self.logger.info(table_wrapper.get_format_table())
 
     def log_callback(self, result):
         """
