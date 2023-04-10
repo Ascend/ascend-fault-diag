@@ -7,9 +7,9 @@ import re
 import subprocess
 import tarfile
 
+from ascend_fd.pkg import fault_code
 from ascend_fd.status import FileNotExistError, JavaError, InfoNotFoundError, FileOpenError
-from ascend_fd.tool import safe_open, safe_chmod
-from ascend_fd.pkg.kg_diag.root_cause_zh import RootCauseZhTranslater
+from ascend_fd.pkg.note_msg import MULTI_KG_ROOT_CAUSE_MSG
 
 kg_logger = logging.getLogger("kg_diag")
 PWD_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -18,25 +18,28 @@ KG_REPO = os.path.join(PWD_PATH, "knowledge-repository")
 MAX_WORKER_NUM = 5
 
 
-def start_kg_diag_job(output_path, worker_list, cfg):
-    kg_result = dict()
-    kg_relation = dict()
+ROOT_CAUSE_TO_FAULTCODE = {
+    "FailedToApplyForResources_Alarm": fault_code.RUNTIME_RESOURCEAPPLY_FAULT,
+    "RegisteredResourcesExceedsTheMaximum_Alarm": fault_code.RUNTIME_REGISTERED_FAULT,
+    "FailedToexecuteTheAICoreOperator_Alarm": fault_code.RUNTIME_AICORE_FAULT,
+    "FailedToexecuteTheAICpuOperator_Alarm": fault_code.RUNTIME_AICPU_FAULT,
+    "MemoryAsyncCopyFailed_Alarm": fault_code.RUNTIME_MEMASYNCCOPY_FAULT,
+}
+
+
+def start_kg_diag_job(worker_server_list, cfg):
+    kg_result = {
+        'analyze_success': True
+    }
     parsed_data = cfg.parse_data
-    for worker_id in worker_list:
-        result_json, relation_json = kg_diag_job(worker_id, parsed_data)
+    for worker_server_id in worker_server_list:
+        result_json = kg_diag_job(worker_server_id, parsed_data)
         kg_result.update(result_json)
-        kg_relation.update(relation_json)
-
-    kg_result = {"Ascend-Knowledge-Graph-Fault-Diag Result": kg_result}
-    kg_out_file = os.path.join(output_path, "kg_diag_report.json")
-    with safe_open(kg_out_file, 'w+', encoding='utf8') as file_stream:
-        file_stream.write(json.dumps(kg_result, ensure_ascii=False, indent=4))
-    safe_chmod(kg_out_file, 0o640)
-
     return kg_result
 
 
-def kg_diag_job(worker_id, parsed_data):
+def kg_diag_job(worker_server_id, parsed_data):
+    worker_id, server_id = worker_server_id
     kg_logger.info(f"start knowledge graph diagnosis task for worker-{worker_id}.")
     java_path = get_java_env()
     input_json_zip = get_kg_input_zip(worker_id, parsed_data)
@@ -52,39 +55,36 @@ def kg_diag_job(worker_id, parsed_data):
         raise InfoNotFoundError(f"the kg-engine analyze worker-{worker_id} failed. Please check the detail log.")
 
     result_str = result_find[0]  # only match one reasoning result
-    return diag_json_wrapper(result_str, worker_id)
+    return diag_json_wrapper(result_str, worker_server_id)
 
 
-def diag_json_wrapper(result_str, worker_id):
-    result_json = {
-        "analyze_success": None,
-        "engine_ver": None,
-        "root_cause_zh_CN": None,
-        "root_cause_en_US": None,
-        "rlt_graph": None
-    }
-    relation_json = dict()
-
+def diag_json_wrapper(result_str, worker_server_id, sep=','):
+    note_msgs = list()
     diag_json = json.loads(result_str)
-    for key in result_json:
-        if key == "rlt_graph":
-            relation_json["rlt_graph"] = json.loads(diag_json["rlt_graph"])
-        result_json[key] = diag_json.get(key, None)
+    rlt_graph = json.loads(diag_json["rlt_graph"])
+    root_cause_en = diag_json.get("root_cause_en_US", None)
 
-    root_cause_en = result_json.get("root_cause_en_US", None)
-    if root_cause_en:
-        result_json["root_cause_zh_CN"] = RootCauseZhTranslater.get_root_cause_zh(root_cause_en)
-    else:
-        result_json["root_cause_zh_CN"] = ""
+    fault_code_list = list()
+    for cause in root_cause_en.split(sep):
+        code = ROOT_CAUSE_TO_FAULTCODE.get(cause, None)
+        if not code:
+            continue
+        fault_code_list.append(ROOT_CAUSE_TO_FAULTCODE.get(cause, None))
 
-    result_json = {
-        f"worker-{worker_id}": result_json
-    }
-    relation_json = {
-        f"worker-{worker_id}": relation_json
-    }
+    if not fault_code_list:
+        kg_logger.warning("Knowledge graph diagnosis normally, "
+                          "maybe 1. No related faults have occurred, 2. Unknown faults exist")
+        fault_code_list.append(fault_code.KG_DIAGNOSIS_NORMAL)
 
-    return result_json, relation_json
+    if len(fault_code_list) > 1:
+        note_msgs.append(MULTI_KG_ROOT_CAUSE_MSG)
+
+    return {worker_server_id: {
+        'error_code': fault_code_list,
+        'all_root_cause_entity': root_cause_en,
+        'rlt_graph': rlt_graph,
+        'note_msgs': note_msgs
+    }}
 
 
 def get_kg_input_zip(rc_worker_id, parsed_data):
