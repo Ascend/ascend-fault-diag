@@ -86,12 +86,12 @@ class KgDiagnoser(BaseWorker):
         :return: the combined results of RC diag job and KG diag job
         """
         result, worker_list = start_rc_diag_job(self.cfg)
-        self.err_result["Rc"].update(result)
+        self.err_result.get("Rc", dict()).update(result)
 
         if not worker_list:
             self.log.warning("the root cause node is not found, so the knowledge graph diag task is not started.")
             raise InnerError("the root cause node is not found, so the knowledge graph diag task is not started.")
 
         kg_result = start_kg_diag_job(worker_list, self.cfg)
-        self.err_result["Kg"].update(kg_result)
+        self.err_result.get("Kg", dict()).update(kg_result)
         return self.err_result

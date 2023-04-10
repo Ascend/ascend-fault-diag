@@ -5,14 +5,14 @@ from dataclasses import dataclass
 
 @dataclass
 class NoteMsg:
-    Note_zh: str
-    Note_en: str
+    note_zh: str
+    note_en: str
 
 
 @dataclass
 class FormatNoteMsg(NoteMsg):
     def format(self, format_info):
-        return NoteMsg(self.Note_zh.format(format_info), self.Note_en.format(format_info))
+        return NoteMsg(self.note_zh.format(format_info), self.note_en.format(format_info))
 
 
 MULTI_RANK_NOTE_MSG = NoteMsg("首节点分析检测出了多个的疑似错误首节点，将优先排查这几个节点。",

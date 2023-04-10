@@ -5,10 +5,10 @@ import logging
 from datetime import datetime
 
 from ascend_fd import regular_rule
+from ascend_fd.pkg import fault_code
 from ascend_fd.tool import popen_grep
 from ascend_fd.status import InfoNotFoundError
 from ascend_fd.pkg.note_msg import MULTI_RANK_NOTE_MSG, MAX_RANK_NOTE_MSG
-from ascend_fd.pkg.fault_code import *
 
 
 rc_logger = logging.getLogger("kg_diag")
@@ -63,7 +63,7 @@ class BaseChecker:
     root_ranks = Rank()
     first_error_rank = None
     last_error_rank = None
-    error_code = RC_DIAGNOSIS_NORMAL
+    error_code = fault_code.RC_DIAGNOSIS_NORMAL
     note_msg = []
 
     def __init__(self, rank_table, warn_msg=None):
@@ -117,23 +117,23 @@ class AllRankNoErrChecker(BaseChecker):
 
     def check(self, plog_map, mode):
         if mode == Mode.NO_FORCE_KILL:
-            self.error_code = RC_UNKOWN_ERROR_ONE
+            self.error_code = fault_code.RC_UNKOWN_ERROR_ONE
             self.root_ranks = Rank()
             return
 
         heartbeat_relation = self._parse_heartbeat_content(plog_map)
         if len(heartbeat_relation) == self.rank_table.rank_num:
-            self.error_code = RC_UNKOWN_ERROR_TWO
+            self.error_code = fault_code.RC_UNKOWN_ERROR_TWO
             self.root_ranks = Rank()
             return
 
         if heartbeat_relation:
             heartbeat_relation_list = sorted(heartbeat_relation.values(), key=lambda x: len(x), reverse=True)
-            self.error_code = HEARTBEAT_LOST_ERROR
+            self.error_code = fault_code.HEARTBEAT_LOST_ERROR
             self.root_ranks = set(heartbeat_relation_list[0])
             return
 
-        self.error_code = RC_UNKOWN_ERROR_THREE
+        self.error_code = fault_code.RC_UNKOWN_ERROR_THREE
         self.root_ranks = Rank()
 
     def _parse_heartbeat_content(self, plog_map):
@@ -202,7 +202,7 @@ class HCCLErrorChecker(BaseChecker):
 
     def check(self, plog_map, mode):
         if not self.rank_table.err_rank:
-            self.error_code = RC_UNKOWN_ERROR_SIX
+            self.error_code = fault_code.RC_UNKOWN_ERROR_SIX
             self.root_ranks = Rank()
             return
         self._parse_err_content(plog_map)
@@ -211,7 +211,7 @@ class HCCLErrorChecker(BaseChecker):
         first_err_time = first_err_rank.err_time
 
         if first_err_rank.hccl_count == 0:
-            self.error_code = RC_UNKOWN_ERROR_FOUR
+            self.error_code = fault_code.RC_UNKOWN_ERROR_FOUR
             self.root_ranks = Rank()
             return
 
@@ -257,15 +257,15 @@ class HCCLErrorChecker(BaseChecker):
             self._check_timeout_err(times, reason_index, mode)
             return
         if reason_index == 3:
-            self.error_code = HCCL_SDMA_FAULT
+            self.error_code = fault_code.HCCL_SDMA_FAULT
             self.root_ranks = rank
             return
         if reason_index == 4:
-            self.error_code = HCCL_MEMCPY_FAULT
+            self.error_code = fault_code.HCCL_MEMCPY_FAULT
             self.root_ranks = rank
             return
 
-        self.error_code = HCCL_TSDCLIENT_FAULT
+        self.error_code = fault_code.HCCL_TSDCLIENT_FAULT
         self.root_ranks = rank
         return
 
@@ -276,23 +276,31 @@ class HCCLErrorChecker(BaseChecker):
             timeout = self.rank_table.get_timeout('NOTIFY_TIMEOUT')
 
         if int(timeout) < times:
-            error_codes = [HCCL_SOCKET_FAULT_SYNC, HCCL_P2P_FAULT_SYNC, HCCL_NOTIFY_FAULT_SYNC]
+            error_codes = [fault_code.HCCL_SOCKET_FAULT_SYNC,
+                           fault_code.HCCL_P2P_FAULT_SYNC,
+                           fault_code.HCCL_NOTIFY_FAULT_SYNC]
             self.error_code = error_codes[reason_index]
             self.root_ranks = Rank()
             return
 
         if mode == Mode.FORCE_KILL:
             if self.rank_table.no_err_rank:
-                error_codes = [HCCL_SOCKET_FAULT_UNKNOWN, HCCL_P2P_FAULT_UNKNOWN, HCCL_NOTIFY_FAULT_CORE_DUMP]
+                error_codes = [fault_code.HCCL_SOCKET_FAULT_UNKNOWN,
+                               fault_code.HCCL_P2P_FAULT_UNKNOWN,
+                               fault_code.HCCL_NOTIFY_FAULT_CORE_DUMP]
                 self.error_code = error_codes[reason_index]
                 self.root_ranks = self.rank_table.no_err_rank
                 return
-            error_codes = [HCCL_SOCKET_FAULT_UNKNOWN, HCCL_P2P_FAULT_UNKNOWN, HCCL_NOTIFY_FAULT_UNKNOWN]
+            error_codes = [fault_code.HCCL_SOCKET_FAULT_UNKNOWN,
+                           fault_code.HCCL_P2P_FAULT_UNKNOWN,
+                           fault_code.HCCL_NOTIFY_FAULT_UNKNOWN]
             self.error_code = error_codes[reason_index]
             self.root_ranks = self.rank_table.err_rank
             return
 
-        error_codes = [HCCL_SOCKET_FAULT_UNKNOWN, HCCL_NOTIFY_FAULT_UNKNOWN, HCCL_P2P_FAULT_UNKNOWN]
+        error_codes = [fault_code.HCCL_SOCKET_FAULT_UNKNOWN,
+                       fault_code.HCCL_NOTIFY_FAULT_UNKNOWN,
+                       fault_code.HCCL_P2P_FAULT_UNKNOWN]
         self.error_code = error_codes[reason_index]
         self.root_ranks = Rank()
         return
@@ -300,11 +308,11 @@ class HCCLErrorChecker(BaseChecker):
 
 class NoErrInNFKChecker(BaseChecker):
     def check(self, plog_map, mode):
-        self.error_code = RC_UNKOWN_ERROR_FIVE
+        self.error_code = fault_code.RC_UNKOWN_ERROR_FIVE
         self.root_ranks = self.rank_table.no_err_rank
 
 
 class SingleRankChecker(BaseChecker):
     def check(self, plog_map, mode):
-        self.error_code = SINGLE_CLUSTER_ERROR
+        self.error_code = fault_code.SINGLE_CLUSTER_ERROR
         self.root_ranks = Rank(worker_id="0", rank_id="0", server_id="NA")

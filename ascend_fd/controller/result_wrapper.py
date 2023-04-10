@@ -49,7 +49,7 @@ class TableWrapper:
             note_msgs = [note_msgs]
         note = ""
         for ind, msg in enumerate(note_msgs):
-            note += f"{ind + 1}. {msg.Note_zh}\n"
+            note += f"{ind + 1}. {msg.note_zh}\n"
         return note.rstrip()
 
     def add_result_rows(self):
@@ -142,8 +142,8 @@ class JsonWrapper:
             note_msgs = [note_msgs]
         note_zh, note_en = "", ""
         for ind, msg in enumerate(note_msgs):
-            note_zh += f"{ind + 1}. {msg.Note_zh}\n"
-            note_en += f"{ind + 1}. {msg.Note_en}\n"
+            note_zh += f"{ind + 1}. {msg.note_zh}\n"
+            note_en += f"{ind + 1}. {msg.note_en}\n"
         return {"Note_zh": note_zh.rstrip(), "Note_en": note_en.rstrip()}
 
     def format_json(self):
