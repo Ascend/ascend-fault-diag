@@ -15,6 +15,10 @@ rc_logger = logging.getLogger("kg_diag")
 
 
 class Rank:
+    """
+    This class is used to store information about a single rank.
+    Includes rank ID, server ID, device ID, raw error log, and parsed error content.
+    """
     def __init__(self, worker_id="-1", rank_id="-1", server_id="-1", device_id="-1"):
         self.worker_id = worker_id
         self.rank_id = rank_id
@@ -72,7 +76,12 @@ class BaseChecker:
             self.note_msg.append(warn_msg)
 
     def get_root_worker_set(self):
+        """
+        get root worker from root cluster(rank) info.
+        :return: root clusters list, root worker list
+        """
         if self.root_ranks == Rank() and self.first_error_rank:
+            # Rank() means unknown rank. If the first error rank exists, it is considered the root cluster.
             self.root_ranks = self.first_error_rank
 
         ranks = self.root_ranks
@@ -80,10 +89,13 @@ class BaseChecker:
         if isinstance(ranks, Rank):
             worker_id, server_id = ranks.worker_id, ranks.server_id
             if worker_id != "-1":
+                # -1 means unknown worker. Unknown workers are not output.
                 worker_set.add((worker_id, server_id))
             return [ranks], list(worker_set)
 
         if isinstance(ranks, (list, set)):
+            # Multiple root cluster may be diagnosed.
+            # If there are more than 5 root clusters, the first five are prioritized.
             if len(ranks) > self.MAX_RANK_NUM:
                 self.note_msg.append(MAX_RANK_NOTE_MSG)
                 ranks = list(ranks)[:self.MAX_RANK_NUM]
@@ -127,6 +139,7 @@ class AllRankNoErrChecker(BaseChecker):
             return
 
         if heartbeat_relation:
+            # heartbeat lost error
             heartbeat_relation_list = sorted(heartbeat_relation.values(), key=lambda x: len(x), reverse=True)
             self.error_code = fault_code.HEARTBEAT_LOST_ERROR
             self.root_ranks = set(heartbeat_relation_list[0])
@@ -201,6 +214,7 @@ class HCCLErrorChecker(BaseChecker):
 
     def check(self, plog_map, mode):
         if not self.rank_table.err_rank:
+            # The error ranks list is empty.
             self.error_code = fault_code.RC_UNKOWN_ERROR_SIX
             self.root_ranks = Rank()
             return
@@ -250,7 +264,7 @@ class HCCLErrorChecker(BaseChecker):
 
     def _check_hccl_error(self, times, reason_index, rank, mode):
         """
-        check hccl time out error reason and rank_id.
+        check hccl error reason and rank_id.
         """
         if reason_index < 3:
             self._check_timeout_err(times, reason_index, mode)
@@ -269,6 +283,12 @@ class HCCLErrorChecker(BaseChecker):
         return
 
     def _check_timeout_err(self, times, reason_index, mode):
+        """
+        check the hccl timeout err reason.
+        :param times: the timeout parameter value.
+        :param reason_index: the error index. 0->socket fault; 1->p2p fault; 2->notify fault
+        :param mode: run mode
+        """
         if reason_index < 2:
             timeout = self.rank_table.get_timeout('CONNECT_TIMEOUT')
         else:

@@ -15,6 +15,9 @@ logger = logging.getLogger("ascend_fd")
 
 
 class TableWrapper:
+    """
+    This class is used to format the output diagnostic results and print them in the terminal in tabular form.
+    """
     SEP = "+--------+"
 
     def __init__(self, result):
@@ -29,6 +32,11 @@ class TableWrapper:
 
     @staticmethod
     def parse_error_code(error_code):
+        """
+        Convert error codes into concrete error content.
+        :param error_code: error code
+        :return: error content rows
+        """
         rows = []
         if not hasattr(exp, f"E{error_code}"):
             logger.error("Can not parse the error code(%s)", error_code)
@@ -45,6 +53,11 @@ class TableWrapper:
 
     @staticmethod
     def parse_note_msgs(note_msgs):
+        """
+        Convert note msgs into Chinese str.
+        :param note_msgs: the note_msgs class or list
+        :return: Chinese note msg str.
+        """
         if isinstance(note_msgs, NoteMsg):
             note_msgs = [note_msgs]
         note = ""
@@ -53,6 +66,10 @@ class TableWrapper:
         return note.rstrip()
 
     def add_result_rows(self):
+        """
+        Add rc and kg result rows.
+        :return:
+        """
         rc_result = self.result.get("Rc")
         if rc_result:
             self.add_rc_rows(rc_result)
@@ -61,9 +78,17 @@ class TableWrapper:
             self.add_kg_rows(kg_result)
 
     def get_format_table(self):
+        """
+        Get tabular information str.
+        :return: result table str
+        """
         return f'\n{self.table.get_string()}'
 
     def add_rc_rows(self, result):
+        """
+        Add rc result rows. Contain root ranks, root workers, error content and note msg.
+        :param result: rc result dict
+        """
         self.table.add_row(["首节点分析", "类型", "描述"], divider=True)
         rc_rows = []
         analyze_success = result.get("analyze_success", False)
@@ -86,6 +111,10 @@ class TableWrapper:
         self.add_paragraph(rc_rows)
 
     def add_kg_rows(self, result):
+        """
+        Add kg result rows. Contain single worker: single worker result.
+        :param result: kg result dict
+        """
         self.table.add_row(["知识图谱分析", "类型", "描述"], divider=True)
         analyze_success = result.get("analyze_success", False)
         if not analyze_success:
@@ -98,6 +127,11 @@ class TableWrapper:
             self.add_kg_worker_rows(key, val)
 
     def add_kg_worker_rows(self, worker_server_id, result):
+        """
+        Add single worker kg result rows. Contain root worker, error contents and note msgs.
+        :param worker_server_id: a root worker
+        :param result: the root worker's result dict
+        """
         kg_rows = [["", "根因设备", f"Worker {worker_server_id[0]}->{worker_server_id[1]}"]]
         error_codes = result.get("error_code", [])
         sep_flag = True if len(error_codes) > 1 else False
@@ -114,6 +148,10 @@ class TableWrapper:
         self.add_paragraph(kg_rows)
 
     def add_paragraph(self, rows):
+        """
+        Add a dividing line after the last line of each paragraph of information.
+        :param rows: the paragraph rows
+        """
         if not rows:
             return
         pre_rows = rows[:-1]
@@ -123,6 +161,9 @@ class TableWrapper:
 
 
 class JsonWrapper:
+    """
+    This class is used to format the output diagnostic results and save them locally.
+    """
     def __init__(self, result):
         self.result = result
         self.json = dict()
@@ -130,6 +171,11 @@ class JsonWrapper:
 
     @staticmethod
     def parse_error_code(error_code):
+        """
+        Convert error codes into concrete error content.
+        :param error_code: error code
+        :return: error content dict
+        """
         if not hasattr(exp, f"E{error_code}"):
             logger.error("Can not parse the error code(%s)", error_code)
             return dict()
@@ -138,6 +184,11 @@ class JsonWrapper:
 
     @staticmethod
     def parse_note_msgs(note_msgs):
+        """
+        Convert note msgs into dict.
+        :param note_msgs: the note_msgs class or list
+        :return: note msg dict, contain zh and en str.
+        """
         if isinstance(note_msgs, NoteMsg):
             note_msgs = [note_msgs]
         note_zh, note_en = "", ""
@@ -147,6 +198,9 @@ class JsonWrapper:
         return {"Note_zh": note_zh.rstrip(), "Note_en": note_en.rstrip()}
 
     def format_json(self):
+        """
+        Format rc and kg result to json.
+        """
         rc_result = self.result.get("Rc")
         if rc_result:
             self.json.update({"Ascend-RC-Worker-Rank-Analyze Result": self.format_rc_result(rc_result)})
@@ -155,9 +209,18 @@ class JsonWrapper:
             self.json.update({"Ascend-Knowledge-Graph-Fault-Diag Result": self.format_kg_result(kg_result)})
 
     def get_format_json(self):
+        """
+        Get the format json result.
+        :return: json result
+        """
         return json.dumps(self.json, ensure_ascii=False, indent=4)
 
     def format_rc_result(self, result):
+        """
+        Format rc result all content to dict.
+        :param result: rc result
+        :return: rc all info dict
+        """
         rc_result = dict()
         for key, value in result.items():
             if key == "error_code":
@@ -173,6 +236,11 @@ class JsonWrapper:
         return rc_result
 
     def format_kg_result(self, result):
+        """
+        Format kg result all content to dict.
+        :param result: kg result
+        :return: kg all info dict
+        """
         kg_result = dict()
         for key, value in result.items():
             if key == "analyze_success":
@@ -182,6 +250,11 @@ class JsonWrapper:
         return kg_result
 
     def format_kg_worker_result(self, result):
+        """
+        Format each worker kg result.
+        :param result: single worker's result
+        :return: the root worker's all info result dict
+        """
         worker_result = dict()
         for key, value in result.items():
             if key == "error_code":

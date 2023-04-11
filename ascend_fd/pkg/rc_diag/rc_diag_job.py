@@ -226,12 +226,12 @@ class RCDiagWorker:
         :return: lost log rank ids set
         """
         all_rank_id = {str(i) for i in range(self.rank_table.rank_num)}
-        exit_rank_id = set()
+        exist_rank_id = set()
 
         rank_list = list(self.plog_map.keys())
         for rank in rank_list:
-            exit_rank_id.add(rank.rank_id)
-        lost_log_rank_ids = all_rank_id - exit_rank_id
+            exist_rank_id.add(rank.rank_id)
+        lost_log_rank_ids = all_rank_id - exist_rank_id
         return LOST_LOG_NOTE_MSG.format(list(lost_log_rank_ids))
 
 
