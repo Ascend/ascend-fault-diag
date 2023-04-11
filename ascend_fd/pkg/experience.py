@@ -192,7 +192,6 @@ class E10014(E00001):
                           "Some clusters lost the heartbeat information in the force_kill mode."
     suggestion_zh: str = "请检查丢失心跳设备(卡)上的训练进程是否正常。"
     suggestion_en: str = "Please check the training process on the lost heartbeat device."
-    reference_url: str = ""
 
 
 @dataclass
@@ -275,7 +274,6 @@ class E20000(E00000):
     description_en: str = "Maybe 1. No related faults have occurred, 2. Unknown faults exist."
     suggestion_zh: str = "若存在问题无法解决，请联系华为工程师定位排查，您可以通过https://gitee.com/ascend网站提交issue获取帮助。"
     suggestion_en: str = "If it cannot be resolved, please turn to the relevant engineer to solve this problem."
-    reference_url: str = ""
 
 
 @dataclass

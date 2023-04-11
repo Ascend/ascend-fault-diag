@@ -44,6 +44,7 @@ def kg_diag_job(worker_server_id, parsed_data):
     java_path = get_java_env()
     input_json_zip = get_kg_input_zip(worker_id, parsed_data)
 
+    # call the kg-engine to analyze root cause
     sub_res = subprocess.run([java_path, "-Xms128m", "-Xmx128m", "-jar", KG_JAR_PATH, KG_REPO, input_json_zip],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding="utf-8")
     result_find = re.compile(r"{.*?analyze_success.*?}$").findall(sub_res.stdout)
@@ -62,18 +63,19 @@ def diag_json_wrapper(result_str, worker_server_id, sep=','):
     note_msgs = list()
     diag_json = json.loads(result_str)
     rlt_graph = json.loads(diag_json["rlt_graph"])
-    root_cause_en = diag_json.get("root_cause_en_US", None)
+    root_cause_en = diag_json.get("root_cause_en_US", "")
 
     fault_code_list = list()
     for cause in root_cause_en.split(sep):
         code = ROOT_CAUSE_TO_FAULTCODE.get(cause, None)
         if not code:
             continue
-        fault_code_list.append(ROOT_CAUSE_TO_FAULTCODE.get(cause, None))
+        fault_code_list.append(code)
 
     if not fault_code_list:
         kg_logger.warning("Knowledge graph diagnosis normally, "
                           "maybe 1. No related faults have occurred, 2. Unknown faults exist")
+        # if kg-engine doesn't diagnose the root cause, set a default code
         fault_code_list.append(fault_code.KG_DIAGNOSIS_NORMAL)
 
     if len(fault_code_list) > 1:
@@ -88,6 +90,9 @@ def diag_json_wrapper(result_str, worker_server_id, sep=','):
 
 
 def get_kg_input_zip(rc_worker_id, parsed_data):
+    """
+    get kg-engine input file.
+    """
     worker_parse_data = parsed_data.get(f'worker-{rc_worker_id}')
     if not worker_parse_data:
         kg_logger.error(f'worker-{rc_worker_id} dir is not exist')
@@ -102,6 +107,7 @@ def get_kg_input_zip(rc_worker_id, parsed_data):
         kg_logger.error(f'ascend_kg_parser.json should not be a symbolic link file')
         raise FileOpenError(f'ascend_kg_parser.json should not be a symbolic link file')
 
+    # kg-engine doesn't support JSON format, need to compress *.json file to *.tar.gz
     dir_path = os.path.dirname(file_name)
     tarfile_name = os.path.join(dir_path, "ascend-kg-parser.tar.gz")
     with tarfile.open(tarfile_name, "w:gz") as tar_file:
