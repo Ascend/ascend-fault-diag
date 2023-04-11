@@ -87,9 +87,8 @@ class BaseChecker:
             if len(ranks) > self.MAX_RANK_NUM:
                 self.note_msg.append(MAX_RANK_NOTE_MSG)
                 ranks = list(ranks)[:self.MAX_RANK_NUM]
-            else:
+            elif len(ranks) > 1:
                 self.note_msg.append(MULTI_RANK_NOTE_MSG)
-                ranks = list(ranks)
             for single_rank in ranks:
                 worker_id, server_id = single_rank.worker_id, single_rank.server_id
                 if worker_id != "-1":
