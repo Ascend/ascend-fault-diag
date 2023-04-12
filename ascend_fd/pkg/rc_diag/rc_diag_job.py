@@ -3,13 +3,14 @@
 import logging
 import os
 import re
-import json
 
-from ascend_fd.status import FileNotExistError, InfoNotFoundError, InfoIncorrectError
-from ascend_fd.pkg.rc_diag.err_checker import (AllRankNoErrChecker, LostLogChecker, SingleRankChecker,
-                                               ErrorInfoChecker, NoErrInNFKChecker, Mode, Rank)
-from ascend_fd.tool import safe_open, popen_grep, safe_chmod
 from ascend_fd import regular_rule
+from ascend_fd.tool import popen_grep
+from ascend_fd.pkg.note_msg import LOST_LOG_NOTE_MSG
+from ascend_fd.status import FileNotExistError, InfoNotFoundError, InfoIncorrectError
+from ascend_fd.pkg.rc_diag.err_checker import (AllRankNoErrChecker, SingleRankChecker, HCCLErrorChecker,
+                                               NoErrInNFKChecker, Mode, Rank)
+
 
 rc_logger = logging.getLogger("kg_diag")
 
@@ -93,26 +94,22 @@ class RCDiagWorker:
         rc_logger.info(f"get the rank info from plog file {os.path.basename(plog_file)} by grep trace log.")
         rank_num = -1
         trace_grep = popen_grep(regular_rule.TRACE_HCCL, file=plog_file)
-        rank_grep = popen_grep(regular_rule.RANK_INFO, stdin=trace_grep.stdout)
+        rank_grep = popen_grep(regular_rule.SERVER_INFO, stdin=trace_grep.stdout)
         rank_logs = rank_grep.stdout.readlines()
         if not rank_logs:
             rc_logger.info(f"cannot get rank info by grep trace log. "
                            f"Get the rank info from plog file {os.path.basename(plog_file)} by grep error log.")
             error_grep = popen_grep(regular_rule.ERROR_HCCL, file=plog_file)
-            rank_grep = popen_grep(regular_rule.RANK_INFO, stdin=error_grep.stdout)
+            rank_grep = popen_grep(regular_rule.SERVER_INFO, stdin=error_grep.stdout)
             rank_logs = rank_grep.stdout.readlines()
             if not rank_logs:
                 return rank_num, Rank()
 
         for rank_log in rank_logs:
-            info_re = re.search(regular_rule.RANKNUM_AND_ID_RE, rank_log)
+            info_re = re.search(regular_rule.RANK_SERVER_DEVICE_RE, rank_log)
             if info_re:
                 rank_num = int(info_re[1])
-                rank_id = info_re[2]
-                server_id, device_id = "0.0.0.0", "-1"
-                ser_dev_re = re.search(regular_rule.SERVER_AND_DEVICE_RE, rank_log)
-                if ser_dev_re:
-                    server_id, device_id = ser_dev_re[1], ser_dev_re[2]
+                rank_id, server_id, device_id = info_re[2], info_re[3], info_re[4]
                 return rank_num, Rank(worker_id, rank_id, server_id, device_id)
         return rank_num, Rank()
 
@@ -124,7 +121,7 @@ class RCDiagWorker:
         err_checker = self.generate_checker()
         err_checker.check(self.plog_map, self.mode)
         result, worker_list = err_checker.format_output()
-        return {"Ascend-RC-Worker-Rank-Analyze Result": result}, worker_list
+        return result, worker_list
 
     def generate_checker(self):
         """
@@ -133,13 +130,17 @@ class RCDiagWorker:
         """
         if self.rank_table.rank_num == -1:
             return SingleRankChecker(self.rank_table)
+
+        lost_log_warn = None
         if len(self.plog_map) != self.rank_table.rank_num:
-            return LostLogChecker(self.rank_table)
+            lost_log_warn = self.get_lost_log_rank()
+            rc_logger.warning(lost_log_warn)
+
         if len(self.rank_table.no_err_rank) == self.rank_table.rank_num:
-            return AllRankNoErrChecker(self.rank_table)
+            return AllRankNoErrChecker(self.rank_table, lost_log_warn)
         if self.mode == Mode.NO_FORCE_KILL and self.rank_table.no_err_rank:
-            return NoErrInNFKChecker(self.rank_table)
-        return ErrorInfoChecker(self.rank_table)
+            return NoErrInNFKChecker(self.rank_table, lost_log_warn)
+        return HCCLErrorChecker(self.rank_table, lost_log_warn)
 
     def init_plog_file(self):
         plog_files = self.get_plog_parser_files()
@@ -219,14 +220,23 @@ class RCDiagWorker:
             self.rank_table.add_no_err_rank(rank)
         self.plog_map.update({rank: plog_file})
 
+    def get_lost_log_rank(self):
+        """
+        get the lost log rank id.
+        :return: lost log rank ids set
+        """
+        all_rank_id = {str(i) for i in range(self.rank_table.rank_num)}
+        exist_rank_id = set()
 
-def start_rc_diag_job(output_path, cfg):
+        rank_list = list(self.plog_map.keys())
+        for rank in rank_list:
+            exist_rank_id.add(rank.rank_id)
+        lost_log_rank_ids = all_rank_id - exist_rank_id
+        return LOST_LOG_NOTE_MSG.format(list(lost_log_rank_ids))
+
+
+def start_rc_diag_job(cfg):
     rc_logger.info("start root cluster diagnosis task.")
     rc_diagnosis = RCDiagWorker(cfg)
     rc_result, worker_list = rc_diagnosis.start_job()
-
-    rc_out_file = os.path.join(output_path, "rc_diag_report.json")
-    with safe_open(rc_out_file, 'w+', encoding='utf8') as file_stream:
-        file_stream.write(json.dumps(rc_result, ensure_ascii=False, indent=4))
-    safe_chmod(rc_out_file, 0o640)
     return rc_result, worker_list

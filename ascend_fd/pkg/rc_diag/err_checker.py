@@ -5,14 +5,20 @@ import logging
 from datetime import datetime
 
 from ascend_fd import regular_rule
+from ascend_fd.pkg import fault_code
 from ascend_fd.tool import popen_grep
 from ascend_fd.status import InfoNotFoundError
+from ascend_fd.pkg.note_msg import MULTI_RANK_NOTE_MSG, MAX_RANK_NOTE_MSG
 
 
 rc_logger = logging.getLogger("kg_diag")
 
 
 class Rank:
+    """
+    This class is used to store information about a single rank.
+    Includes rank ID, server ID, device ID, raw error log, and parsed error content.
+    """
     def __init__(self, worker_id="-1", rank_id="-1", server_id="-1", device_id="-1"):
         self.worker_id = worker_id
         self.rank_id = rank_id
@@ -58,85 +64,88 @@ class Mode:
 
 class BaseChecker:
     MAX_RANK_NUM = 5
-    name = "Base error"
-    description = "Unknown errors happen in the training process."
-    solution = "Please turn to the relevant engineer to solve this problem."
     root_ranks = Rank()
     first_error_rank = None
     last_error_rank = None
+    error_code = fault_code.RC_DIAGNOSIS_NORMAL
+    note_msg = []
 
-    def __init__(self, rank_table):
+    def __init__(self, rank_table, warn_msg=None):
         self.rank_table = rank_table
-
-    def __str__(self):
-        return f"{self.name}: {self.description} " \
-               f"Root cause rank(s) is/are: {str(self.root_ranks)}. " \
-               f"Solution: {self.solution}"
+        if warn_msg:
+            self.note_msg.append(warn_msg)
 
     def get_root_worker_set(self):
+        """
+        get root worker from root cluster(rank) info.
+        :return: root clusters list, root worker list
+        """
         if self.root_ranks == Rank() and self.first_error_rank:
+            # Rank() means unknown rank. If the first error rank exists, it is considered the root cluster.
             self.root_ranks = self.first_error_rank
 
         ranks = self.root_ranks
         worker_set = set()
         if isinstance(ranks, Rank):
-            worker_id = ranks.worker_id
-            if worker_id == "-1":
-                return ranks, worker_set
-            worker_set.add(worker_id)
-            return [ranks], worker_set
+            worker_id, server_id = ranks.worker_id, ranks.server_id
+            if worker_id != "-1":
+                # -1 means unknown worker. Unknown workers are not output.
+                worker_set.add((worker_id, server_id))
+            return [ranks], list(worker_set)
+
         if isinstance(ranks, (list, set)):
-            ranks = list(ranks)[:self.MAX_RANK_NUM]
+            # Multiple root cluster may be diagnosed.
+            # If there are more than 5 root clusters, the first five are prioritized.
+            if len(ranks) > self.MAX_RANK_NUM:
+                self.note_msg.append(MAX_RANK_NOTE_MSG)
+                ranks = list(ranks)[:self.MAX_RANK_NUM]
+            elif len(ranks) > 1:
+                self.note_msg.append(MULTI_RANK_NOTE_MSG)
             for single_rank in ranks:
-                worker_id = single_rank.worker_id
+                worker_id, server_id = single_rank.worker_id, single_rank.server_id
                 if worker_id != "-1":
-                    worker_set.add(worker_id)
-        return ranks, worker_set
+                    worker_set.add((worker_id, server_id))
+        return ranks, list(worker_set)
 
     def check(self, plog_map, mode):
         pass
 
     def format_output(self):
-        result = {"analyze_success": True, "engine_ver": "v1.0.0", "root_cause_worker": [], "root_cause_rank": [],
-                  "first_error_rank": None, "last_error_rank": None, "root_cause_description": ""}
-
         ranks, worker_set = self.get_root_worker_set()
-        result["root_cause_worker"] = str(list(worker_set))
-        result["root_cause_rank"] = str(ranks)
-        result["root_cause_description"] = self.__str__()
+        result = {"analyze_success": True,
+                  "root_cause_rank": [single_rank.__repr__() for single_rank in ranks],
+                  "root_cause_worker": worker_set,
+                  "first_error_rank": self.first_error_rank.__repr__() if self.first_error_rank else None,
+                  "last_error_rank": self.last_error_rank.__repr__() if self.last_error_rank else None,
+                  "error_code": self.error_code,
+                  "note_msgs": self.note_msg}
 
-        if self.first_error_rank:
-            result["first_error_rank"] = self.first_error_rank.__repr__()
-        if self.last_error_rank:
-            result["last_error_rank"] = self.last_error_rank.__repr__()
-        return result, list(worker_set)
+        return result, worker_set
 
 
 class AllRankNoErrChecker(BaseChecker):
     HEARTBEAT_RE_LENGTH = 3
-    name = "All rank have no error"
 
     def check(self, plog_map, mode):
         if mode == Mode.NO_FORCE_KILL:
-            self.description = "No errors logs are found on all ranks when the mode is NO_FORCE_KILL."
+            self.error_code = fault_code.RC_UNKOWN_ERROR_ONE
             self.root_ranks = Rank()
             return
 
         heartbeat_relation = self._parse_heartbeat_content(plog_map)
         if len(heartbeat_relation) == self.rank_table.rank_num:
-            self.description = "No error logs are found on all Ranks. And all ranks have heartbeats."
+            self.error_code = fault_code.RC_UNKOWN_ERROR_TWO
             self.root_ranks = Rank()
             return
 
         if heartbeat_relation:
+            # heartbeat lost error
             heartbeat_relation_list = sorted(heartbeat_relation.values(), key=lambda x: len(x), reverse=True)
-            no_heartbeat_max_set = set(heartbeat_relation_list[0])
-            self.description = f"In the FORCE_KILL mode, heartbeat was lost on rank {str(no_heartbeat_max_set)}"
-            self.solution = "Please check the training process on the lost heartbeat device."
-            self.root_ranks = no_heartbeat_max_set
+            self.error_code = fault_code.HEARTBEAT_LOST_ERROR
+            self.root_ranks = set(heartbeat_relation_list[0])
             return
 
-        self.description = "No error logs are found on all Ranks. And all ranks don't have heartbeats."
+        self.error_code = fault_code.RC_UNKOWN_ERROR_THREE
         self.root_ranks = Rank()
 
     def _parse_heartbeat_content(self, plog_map):
@@ -176,7 +185,7 @@ class AllRankNoErrChecker(BaseChecker):
         return heartbeat_relation
 
 
-class ErrorInfoChecker(BaseChecker):
+class HCCLErrorChecker(BaseChecker):
     HCCL_ERR_REASON = ["get socket timeout", "connected p2p timeout", "taskType[Notify Wait]",
                        "taskType[Reduce Inline]", "taskType[Memcpy]", "Open TsdClient failed"]
 
@@ -204,15 +213,18 @@ class ErrorInfoChecker(BaseChecker):
         rank.update_err_content(err_content)
 
     def check(self, plog_map, mode):
+        if not self.rank_table.err_rank:
+            # The error ranks list is empty.
+            self.error_code = fault_code.RC_UNKOWN_ERROR_SIX
+            self.root_ranks = Rank()
+            return
         self._parse_err_content(plog_map)
         first_err_rank = self.rank_table.err_rank[0]
         self.first_error_rank = first_err_rank
         first_err_time = first_err_rank.err_time
 
         if first_err_rank.hccl_count == 0:
-            self.name = "Unknown error"
-            self.description = "The first rank to report the error does not contain HCCL errors. " \
-                               "This component only supports HCCL error detection."
+            self.error_code = fault_code.RC_UNKOWN_ERROR_FOUR
             self.root_ranks = Rank()
             return
 
@@ -252,94 +264,74 @@ class ErrorInfoChecker(BaseChecker):
 
     def _check_hccl_error(self, times, reason_index, rank, mode):
         """
-        check hccl time out error reason and rank_id.
+        check hccl error reason and rank_id.
         """
         if reason_index < 3:
             self._check_timeout_err(times, reason_index, mode)
             return
         if reason_index == 3:
-            self.name = "SDMA error"
-            self.description = f"The cause of this error is 'SDMA overflowing' and data overflow occurred on {rank}."
+            self.error_code = fault_code.HCCL_SDMA_FAULT
             self.root_ranks = rank
             return
         if reason_index == 4:
-            self.name = "Memcpy error"
-            self.description = f"The cause of the error is Memcpy failed and rankid is {rank}."
+            self.error_code = fault_code.HCCL_MEMCPY_FAULT
             self.root_ranks = rank
             return
 
-        self.name = "TsdClient error"
-        self.description = f"Other HCCP process on the rank {rank}."
-        self.solution = "Please wait some times or log in to the device " \
-                        "and kill the hccp process or restart the environment."
+        self.error_code = fault_code.HCCL_TSDCLIENT_FAULT
         self.root_ranks = rank
         return
 
     def _check_timeout_err(self, times, reason_index, mode):
-        self.name = "Timeout error"
-
-        err_cate = ["get socket timeout", "connected p2p timeout", "notify timeout"]
+        """
+        check the hccl timeout err reason.
+        :param times: the timeout parameter value.
+        :param reason_index: the error index. 0->socket fault; 1->p2p fault; 2->notify fault
+        :param mode: run mode
+        """
         if reason_index < 2:
             timeout = self.rank_table.get_timeout('CONNECT_TIMEOUT')
         else:
             timeout = self.rank_table.get_timeout('NOTIFY_TIMEOUT')
 
         if int(timeout) < times:
-            self.description = f"The cause of this error is '{err_cate[reason_index]}' " \
-                               f"due to the fail of Inter-card synchronization."
-            self.solution = f"Now the timeout is {timeout}, please set a longer timeout period."
+            error_codes = [fault_code.HCCL_SOCKET_FAULT_SYNC,
+                           fault_code.HCCL_P2P_FAULT_SYNC,
+                           fault_code.HCCL_NOTIFY_FAULT_SYNC]
+            self.error_code = error_codes[reason_index]
+            self.root_ranks = Rank()
             return
 
         if mode == Mode.FORCE_KILL:
             if self.rank_table.no_err_rank:
-                self.description = f"The cause of this error is '{err_cate[reason_index]}'. " \
-                                   f"Maybe the {self.rank_table.no_err_rank} is/are too slow or core dump."
+                error_codes = [fault_code.HCCL_SOCKET_FAULT_UNKNOWN,
+                               fault_code.HCCL_P2P_FAULT_UNKNOWN,
+                               fault_code.HCCL_NOTIFY_FAULT_CORE_DUMP]
+                self.error_code = error_codes[reason_index]
                 self.root_ranks = self.rank_table.no_err_rank
                 return
-            self.description = f"The cause of this error is '{err_cate[reason_index]}', " \
-                               f"Timeout is reported for all ranks."
+            error_codes = [fault_code.HCCL_SOCKET_FAULT_UNKNOWN,
+                           fault_code.HCCL_P2P_FAULT_UNKNOWN,
+                           fault_code.HCCL_NOTIFY_FAULT_UNKNOWN]
+            self.error_code = error_codes[reason_index]
             self.root_ranks = self.rank_table.err_rank
             return
 
-        self.description = f"The cause of this error is '{err_cate[reason_index]}'."
+        error_codes = [fault_code.HCCL_SOCKET_FAULT_UNKNOWN,
+                       fault_code.HCCL_NOTIFY_FAULT_UNKNOWN,
+                       fault_code.HCCL_P2P_FAULT_UNKNOWN]
+        self.error_code = error_codes[reason_index]
         self.root_ranks = Rank()
         return
 
 
-class LostLogChecker(BaseChecker):
-    name = "Lost log error"
-
-    def check(self, plog_map, mode):
-        all_rank_id = {str(i) for i in range(self.rank_table.rank_num)}
-        exit_rank_id = set()
-
-        rank_list = list(plog_map.keys())
-        for rank in rank_list:
-            exit_rank_id.add(rank.rank_id)
-        lost_log_rank_ids = all_rank_id - exit_rank_id
-        lost_log_rank = set()
-
-        for rank_id in lost_log_rank_ids:
-            lost_log_rank.add(Rank(rank_id=rank_id))
-        self.description = f"The following rank IDs {list(lost_log_rank)} do not have log records."
-        self.solution = f"Please check: 1. logs are complete; 2.training has started on {list(lost_log_rank)}."
-        self.root_ranks = lost_log_rank
-
-
 class NoErrInNFKChecker(BaseChecker):
-    name = "No error in no-force-kill mode"
-
     def check(self, plog_map, mode):
-        self.description = f"Rank {self.rank_table.no_err_rank} have no errs in the log. " \
-                           f"The possible cause is that the process is hung."
-        self.solution = "Please check the train process on the wrong rank ids."
+        self.error_code = fault_code.RC_UNKOWN_ERROR_FIVE
         self.root_ranks = self.rank_table.no_err_rank
 
 
 class SingleRankChecker(BaseChecker):
-    name = "Single rank error"
-
     def check(self, plog_map, mode):
-        self.description = "This is a single-card training task, and the root cluster diag task will skip."
-        self.solution = "Please check the knowledge graph diag task result."
-        self.root_ranks = Rank(worker_id="0", rank_id="0")
+        self.error_code = fault_code.SINGLE_CLUSTER_ERROR
+        self.root_ranks = Rank(worker_id="0", rank_id="0", server_id="NA")

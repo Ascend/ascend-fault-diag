@@ -65,7 +65,7 @@ def init_main_logger(output_path):
     """
     logger = init_job_logger(output_path, "ascend_fd")
 
-    stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
     stream_handler.setFormatter(logging.Formatter(SIMPLE_FORMAT))
 
     logger.addHandler(stream_handler)

@@ -2,12 +2,21 @@
 # Copyright(C) Huawei Technologies Co.,Ltd. 2023. All rights reserved.
 import os
 import subprocess
+from pathlib import Path
 
 from ascend_fd.status import FileNotExistError, FileOpenError
 
 VERSION_FILE_READ_LIMIT = 100
 MAX_SIZE = 512 * 1024 * 1024
 MB_SHIFT = 20
+
+
+def get_version():
+    src_path = Path(__file__).absolute().parent
+    version_file = src_path.joinpath("Version.info")
+    with safe_open(version_file, 'r') as f:
+        version_info = f.read(VERSION_FILE_READ_LIMIT)
+    return version_info
 
 
 def path_check(input_path, output_path):
