@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 from ascend_fd.tool import safe_open, VERSION_FILE_READ_LIMIT
 
-DEFAULT_VERSION = "5.0.RC1"
+DEFAULT_VERSION = "5.0.RC2"
 
 
 def get_version():
