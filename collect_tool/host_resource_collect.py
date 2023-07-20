@@ -10,6 +10,9 @@ import time
 
 
 def command_line():
+    """
+    This function is used to get arguments
+    """
     arg_cmd = argparse.ArgumentParser(add_help=True, description="Ascend Fault Diag Host Metrics Sample")
     arg_cmd.add_argument("-o", "--output_path", type=str, default="./", help="OUTPUT_PATH")
     return arg_cmd.parse_args()
@@ -17,7 +20,10 @@ def command_line():
 
 class HostResourceCollect:
     def __init__(self, output_path):
-
+        """
+        Init host resource collect params
+        :param output_path: the output path
+        """
         self.output_path = output_path
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
@@ -28,7 +34,8 @@ class HostResourceCollect:
     @staticmethod
     def get_core_num():
         """
-        Get cpu core number.
+        Get cpu core number by 'cat /proc/cpuinfo | grep processor | wc -l'
+        :return: the cpu max core num
         """
         cpu_cmd = "cat /proc/cpuinfo"
         cpu_res = subprocess.Popen(cpu_cmd.split(), shell=False, stdout=subprocess.PIPE,
@@ -39,13 +46,14 @@ class HostResourceCollect:
         core_cmd = "wc -l"
         core_res = subprocess.Popen(core_cmd.split(), shell=False, stdin=grep_res.stdout, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-        res = core_res.stdout.read().decode("utf-8").strip()
-        return res
+        core_num = core_res.stdout.read().decode("utf-8").strip()
+        return core_num
 
     @staticmethod
     def get_top_data():
         """
-        Get the top result by popen
+        Get the top result by 'top -o +RES -i -n 1'
+        :return: the top data
         """
         top_cmd = "top -o +RES -i -n 1"
         top_popen = subprocess.Popen(top_cmd.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -67,12 +75,12 @@ class HostResourceCollect:
                      r'(\[\?\d;\d0c)|' \
                      r'(\d;\dR))'
         ansi_escape = re.compile(ansi_regex, flags=re.IGNORECASE)
-        res = ansi_escape.sub('', res)
-        return res
+        top_data = ansi_escape.sub('', res)
+        return top_data
 
     def host_resource_collect(self):
         """
-        Top info collect
+        Host resource collect by top data
         :return: host_metrics_{core_num}.json
         """
         start_time = None
@@ -93,6 +101,8 @@ class HostResourceCollect:
     def parse_single_top_data(self, top_data, top_tme):
         """
         Parse the top data of 60s.(one piece)
+        :param top_data: the top data (one piece)
+        :param top_tme: the time of top data collect
         :return: result save to top res
         """
         top_count = 0
