@@ -67,7 +67,7 @@ def collect_state_info(now_time, output_path):
         for line in grep_info.stdout.readlines():
             line_list = line.decode().strip().split(":")
             row_data.append(line_list[1])
-        with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)), os.O_WRONLY), "a") as file:
+        with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)), os.O_WRONLY, MODE), "a") as file:
             writer = csv.writer(file)
             writer.writerow(row_data)
 
