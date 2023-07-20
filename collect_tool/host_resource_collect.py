@@ -92,7 +92,7 @@ class HostResourceCollect:
         """
         top_count = 0
         for line in top_data.splitlines():
-            if top_count > 9:  # 采集rss前十大
+            if top_count > 9:  # 采集RES前十大
                 break
             top_count += 1
             match_mem = re.match(r'.*?KiB.*?Mem.*?free,.*?(\d+\+?).*?used,.*?buff/cache', line)
