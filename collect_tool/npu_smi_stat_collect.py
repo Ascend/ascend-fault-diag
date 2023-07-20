@@ -6,10 +6,19 @@ import stat
 import time
 import argparse
 import subprocess
+import logging
 
 
 HEADER = ["time", "dev_id", "power", "rated_freq", "freq", "temp", "hbm_rate"]
 MODE = stat.S_IWUSR | stat.S_IRUSR
+
+
+# echo used to print error information
+_echo_handler = logging.StreamHandler()
+_echo_handler.setFormatter(logging.Formatter('%(message)s'))
+echo = logging.getLogger("echo")
+echo.addHandler(_echo_handler)
+echo.setLevel(logging.INFO)
 
 
 def command_line():
@@ -47,7 +56,7 @@ def collect_job(output_path, interval_time):
         try:
             collect_state_info(now_time, output_path)
         except Exception as e:
-            print("collect npu data exception: {}\n".format(e))
+            echo.info("collect npu data exception: {}", e)
 
 
 def collect_state_info(now_time, output_path):
