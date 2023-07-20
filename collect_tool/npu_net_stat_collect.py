@@ -97,8 +97,8 @@ def run_collect_task(npu_num, output_path, wait_time):
 
 
 if __name__ == '__main__':
+    arg = command_lines()
     try:
-        arg = command_lines()
         run_collect_task(arg.npu_num, arg.output_path, arg.interval_time)
     except KeyboardInterrupt:
         echo.info(f"Collection stops\n")
