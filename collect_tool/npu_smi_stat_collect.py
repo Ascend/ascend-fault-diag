@@ -31,7 +31,7 @@ def collect_job(output_path, interval_time):
         os.makedirs(output_path)
     file_name = "npu_smi_{}_details.csv"
     for i in range(8):  # 8张卡
-        with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)), 
+        with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)),
                                os.O_WRONLY | os.O_CREAT, MODE), "w") as file:
             writer = csv.writer(file)
             writer.writerow(HEADER)  # 写入csv表头
