@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import os
+import stat
 import subprocess
 import time
 
@@ -29,11 +30,14 @@ class HostResourceCollect:
         """
         Get cpu core number.
         """
-        cpu_res = subprocess.Popen(["cat", "/proc/cpuinfo"], shell=False, stdout=subprocess.PIPE,
+        cpu_cmd = "cat /proc/cpuinfo"
+        cpu_res = subprocess.Popen(cpu_cmd.split(), shell=False, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
-        grep_res = subprocess.Popen(["grep", "processor"], shell=False, stdin=cpu_res.stdout, stdout=subprocess.PIPE,
+        grep_cmd = "grep processor"
+        grep_res = subprocess.Popen(grep_cmd.split(), shell=False, stdin=cpu_res.stdout, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-        core_res = subprocess.Popen(["wc", "-l"], shell=False, stdin=grep_res.stdout, stdout=subprocess.PIPE,
+        core_cmd = "wc -l"
+        core_res = subprocess.Popen(core_cmd.split(), shell=False, stdin=grep_res.stdout, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
         res = core_res.stdout.read().decode("utf-8").strip()
         return res
@@ -82,7 +86,8 @@ class HostResourceCollect:
             start_time = time.time()
             top_data = self.get_top_data()
             self.parse_single_top_data(top_data, int(start_time))
-            with open(os.path.join(self.output_path, f"host_metrics_{self.core_num}.json"), 'w') as f:
+            with os.fdopen(os.open(os.path.join(self.output_path, f"host_metrics_{self.core_num}.json"),
+                                   os.O_WRONLY | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR), 'w') as f:
                 f.write(json.dumps(self.top_res))
 
     def parse_single_top_data(self, top_data, top_tme):
