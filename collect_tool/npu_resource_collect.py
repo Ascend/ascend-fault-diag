@@ -2,19 +2,21 @@
 # Copyright(C) Huawei Technologies Co.,Ltd. 2023. ALL rights reserved.
 import os
 import csv
+import stat
 import time
 import argparse
 import subprocess
 
 
 HEADER = ["time", "dev_id", "power", "rated_freq", "freq", "temp", "hbm_rate"]
+MODE = stat.S_IWUSR | stat.S_IRUSR
 
 
 def command_line():
-    cli = argparse.ArgumentParser(add_help=True, description="NPU state collector")
-    cli.add_argument("-o", "--output", type=str, required=True, help="save dir path")
-    cli.add_argument("-it", "--interval_time", type=int, default=15, help="collect interval time")
-    return cli.parse_args()
+    command = argparse.ArgumentParser(add_help=True, description="NPU state collector")
+    command.add_argument("-o", "--output", type=str, required=True, help="save dir path")
+    command.add_argument("-it", "--interval_time", type=int, default=15, help="collect interval time")
+    return command.parse_args()
 
 
 def collect_job(output_path, interval_time):
@@ -29,7 +31,8 @@ def collect_job(output_path, interval_time):
         os.makedirs(output_path)
     file_name = "npu_smi_{}_details.csv"
     for i in range(8):  # 8张卡
-        with open(os.path.join(output_path, file_name.format(i)), "w+") as file:
+        with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)), 
+                               os.O_WRONLY | os.O_CREAT, MODE), "w") as file:
             writer = csv.writer(file)
             writer.writerow(HEADER)  # 写入csv表头
     end_time = int(time.time() + (3600 * 72)) # 可以不限制，限制时间可保证后台执行忘记关闭后不会一直执行
@@ -64,7 +67,7 @@ def collect_state_info(now_time, output_path):
         for line in grep_info.stdout.readlines():
             line_list = line.decode().strip().split(":")
             row_data.append(line_list[1])
-        with open(os.path.join(output_path, file_name.format(i)), "a") as file:
+        with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)), os.O_WRONLY), "a") as file:
             writer = csv.writer(file)
             writer.writerow(row_data)
 
