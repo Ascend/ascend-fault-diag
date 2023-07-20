@@ -12,10 +12,10 @@ FILE_NAME = "npu_{}_detail.csv"
 FLAG = os.O_WRONLY | os.O_CREAT
 
 # echo used to print error information
-echo_handler = logging.StreamHandler()
-echo_handler.setFormatter(logging.Formatter('%(message)s'))
+_echo_handler = logging.StreamHandler()
+_echo_handler.setFormatter(logging.Formatter('%(message)s'))
 echo = logging.getLogger("echo")
-echo.addHandler(echo_handler)
+echo.addHandler(_echo_handler)
 echo.setLevel(logging.INFO)
 
 
@@ -88,13 +88,17 @@ def run_collect_task(npu_num, output_path, wait_time):
     :param wait_time: waiting time for each collection
     """
     create_file(npu_num, output_path)
-    try:
-        collect_stat(npu_num, output_path)
-    except Exception as e:
-        echo.info(f"Collect npu data exception e:{e}\n")
-    time.sleep(wait_time)
+    while True:
+        try:
+            collect_stat(npu_num, output_path)
+        except Exception as e:
+            echo.info(f"Collect npu data exception e: {e}\n")
+        time.sleep(wait_time)
 
 
 if __name__ == '__main__':
-    arg = command_lines()
-    run_collect_task(arg.npu_num, arg.output_path, arg.wait_time)
+    try:
+        arg = command_lines()
+        run_collect_task(arg.npu_num, arg.output_path, arg.interval_time)
+    except KeyboardInterrupt:
+        echo.info(f"Collection stops\n")
