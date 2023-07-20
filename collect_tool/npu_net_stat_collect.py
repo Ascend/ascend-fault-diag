@@ -1,6 +1,7 @@
 # coding: UTF-8
 # Copyright (c) 2023. Huawei Technologies Co., Ltd. ALL rights reserved.
 import argparse
+import logging
 import os.path
 import subprocess
 import time
@@ -8,6 +9,14 @@ import time
 HCCL_TOOL = '/usr/bin/hccn_tool'
 FILE_NAME = "npu_{}_detail.csv"
 FLAG = os.O_WRONLY | os.O_CREAT
+
+
+# echo used to print error information
+echo_handler = logging.StreamHandler()
+echo_handler.setFormatter(logging.Formatter('%(message)s'))
+echo = logging.getLogger("echo")
+echo.addHandler(echo_handler)
+echo.setLevel(logging.INFO)
 
 
 def command_lines():
@@ -84,7 +93,7 @@ def run_collect_task(npu_num, output_path, collect_time, wait_time):
         try:
             collect_stat(npu_num, output_path)
         except Exception as e:
-            print("Collect npu data exception e:{}\n".format(e))
+            echo.info(f"Collect npu data exception e:{e}\n")
         time.sleep(wait_time)
 
 
