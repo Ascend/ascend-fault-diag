@@ -1,16 +1,19 @@
 # coding: UTF-8
 # Copyright (c) 2023. Huawei Technologies Co., Ltd. ALL rights reserved.
 import argparse
-import csv
 import os.path
 import subprocess
 import time
 
 HCCL_TOOL = '/usr/bin/hccn_tool'
-file_name = "npu_{}_detail.csv"
+FILE_NAME = "npu_{}_detail.csv"
+FLAG = os.O_WRONLY | os.O_CREAT
 
 
 def command_lines():
+    """
+    This function is used to get arguments
+    """
     arg_cmd = argparse.ArgumentParser(add_help=True, description="Ascend Fault Diag Metric Sample")
     arg_cmd.add_argument("-n", "--npu_num", type=int, default=8, help="NPU number")
     arg_cmd.add_argument("-wt", "--wait_time", type=int, default=15, help="Wait time")
@@ -20,6 +23,10 @@ def command_lines():
 
 
 def collect_single_stat(device_id):
+    """
+    collect net stat for a single npu card
+    :param device_id: device id
+    """
     name_list = list()
     value_list = list()
     stat_cmd_list = [HCCL_TOOL, '-i', str(device_id), '-stat', '-g']
@@ -35,27 +42,42 @@ def collect_single_stat(device_id):
 
 
 def create_file(npu_num, output_path):
+    """
+    create npu stat csv file for each npu
+    :param npu_num: number of npu
+    :param output_path: path to save csv files
+    """
     header_row_data = ['timestamp', 'npu_index']
     _, name_list = collect_single_stat(0)
     header_row_data.extend(name_list)
     for device_id in range(npu_num):
-        with open(os.path.join(output_path, file_name.format(device_id)), "w+") as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(header_row_data)
+        with os.fdopen(os.open(os.path.join(output_path, FILE_NAME.format(device_id)), FLAG, 0o640), 'w+') as csv_file:
+            csv_file.writelines(header_row_data)
 
 
 def collect_stat(npu_num, output_path):
+    """
+    collect npu stat for each npu
+    :param npu_num: number of npu
+    :param output_path: path to write stat information
+    """
     now = int(time.time())
     for device_id in range(npu_num):
         row_data = [now, device_id]
         value_list, _ = collect_single_stat(device_id)
         row_data.extend(value_list)
-        with open(os.path.join(output_path, file_name.format(device_id)), "a") as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(row_data)
+        with os.fdopen(os.open(os.path.join(output_path, FILE_NAME.format(device_id)), FLAG, 0o640), 'a') as csv_file:
+            csv_file.writelines(row_data)
 
 
 def run_collect_task(npu_num, output_path, collect_time, wait_time):
+    """
+    run collect npu stat task
+    :param npu_num: number of npu
+    :param output_path: path to write stat information
+    :param collect_time: total time to collect
+    :param wait_time: waiting time for each collection
+    """
     create_file(npu_num, output_path)
     end_time = int(time.time()) + collect_time
     while int(time.time()) < end_time:
