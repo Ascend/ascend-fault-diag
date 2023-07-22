@@ -48,7 +48,7 @@ collect_tool
 示例：
 `python3 npu_smi_stat_collect.py -it 15 -o /xx/enviornment_check/worker-0`
 
-执行结果： 在`{OUTPUT_PATH}`目录下生成8个`npu_(\d+)_details.csv`文件。  
+执行结果： 在`{OUTPUT_PATH}`目录下生成8个`npu_smi_(\d+)_details.csv`文件。  
 
 **2、参数说明**
 
