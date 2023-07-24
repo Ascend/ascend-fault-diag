@@ -69,7 +69,7 @@ class HostResourceCollect:
                      r'(\[;?[hf])|' \
                      r'(#[3-68])|' \
                      r'([01356]n)|' \
-                     r'(0[mlnp-z]?)|' \
+                     r'(O[mlnp-z]?)|' \
                      r'(/Z)|' \
                      r'(\d+)|' \
                      r'(\[\?\d;\d0c)|' \
@@ -98,11 +98,11 @@ class HostResourceCollect:
                                    os.O_WRONLY | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR), 'w') as f:
                 f.write(json.dumps(self.top_res))
 
-    def parse_single_top_data(self, top_data, top_tme):
+    def parse_single_top_data(self, top_data, top_time):
         """
         Parse the top data of 60s.(one piece)
         :param top_data: the top data (one piece)
-        :param top_tme: the time of top data collect
+        :param top_time: the time of top data collect
         :return: result save to top res
         """
         top_count = 0
@@ -118,7 +118,7 @@ class HostResourceCollect:
             # 处理mem数据
             if match_mem:
                 self.top_res.setdefault("node_mem_used", list()).append(
-                    [top_tme, int(match_mem[1].replace('+', '0')) * 1024])
+                    [top_time, int(match_mem[1].replace('+', '0')) * 1024])
                 continue
 
             # 处理process数据(process_info[0]: pid, process_info[1]: RES, process_info[2]: cpu)
@@ -128,8 +128,8 @@ class HostResourceCollect:
                     process_info[1] = int(float(process_info[1][:-1]) * 1024 * 1024 * 1024)
                 else:
                     process_info[1] = int(float(process_info[1]) * 1024)
-                self.top_res.setdefault(f"node_rss_{process_info[0]}", list()).append([top_tme, process_info[1]])
-                self.top_res.setdefault(f"node_cpu_{process_info[0]}", list()).append([top_tme, process_info[2]])
+                self.top_res.setdefault(f"node_rss_{process_info[0]}", list()).append([top_time, process_info[1]])
+                self.top_res.setdefault(f"node_cpu_{process_info[0]}", list()).append([top_time, process_info[2]])
 
 
 if __name__ == "__main__":
