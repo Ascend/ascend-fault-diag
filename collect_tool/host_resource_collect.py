@@ -14,7 +14,7 @@ def command_line():
     This function is used to get arguments
     """
     arg_cmd = argparse.ArgumentParser(add_help=True, description="Ascend Fault Diag Host Metrics Sample")
-    arg_cmd.add_argument("-o", "--output_path", type=str, default="./", help="OUTPUT_PATH")
+    arg_cmd.add_argument("-o", "--output_path", type=str, required=True, help="Output path")
     return arg_cmd.parse_args()
 
 
