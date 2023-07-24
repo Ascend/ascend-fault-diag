@@ -18,10 +18,10 @@ collect_tool
 
 **1、运行说明**
 
-`python3 npu_net_stat_collect.py -n {NPU_NUM} -wt {WAIT_TIME} -ct {COLLECT_TIME} -o {OUTPUT_PATH}`
+`python3 npu_net_stat_collect.py -n {NPU_NUM} -it {INTERVAL_TIME} -ct {COLLECT_TIME} -o {OUTPUT_PATH}`
 
 示例：
-`python3 npu_net_stat_collect.py -n 8 -wt 15 -ct 3600 -o /xx/enviornment_check/worker-0`
+`python3 npu_net_stat_collect.py -n 8 -it 15 -ct 3600 -o /xx/enviornment_check/worker-0`
 
 执行结果： 在`{OUTPUT_PATH}`目录下生成`{NPU_NUM}`个`npu_(\d+)_details.csv`文件。  
 
@@ -29,7 +29,7 @@ collect_tool
 
 `-n {NPU_NUM}`，npu卡数，默认值为8
 
-`-wt {WAIT_TIME}`，采集间隔时间，单位秒，默认值为15
+`-it {INTERVAL_TIME}`，采集间隔时间，单位秒，默认值为15
 
 `-ct {COLLECT_TIME}`，采集总时间，单位秒，默认值为60
 
