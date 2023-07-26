@@ -52,12 +52,13 @@ class HostResourceCollect:
     @staticmethod
     def get_top_data():
         """
-        Get the top result by 'top -o +RES -i -n 1'
+        Get the top result by 'top -o +RES -i -n 1 -b'
         :return: the top data
         """
-        top_cmd = "top -o +RES -i -n 1"
+        top_cmd = "top -o +RES -i -n 1 -b"
         top_popen = subprocess.Popen(top_cmd.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         res = top_popen.stdout.read().decode("utf-8").strip()
+        # 处理top数据中的转义字符
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         res = ansi_escape.sub('', res)
         ansi_regex = r'\x1b(' \
@@ -83,20 +84,22 @@ class HostResourceCollect:
         Host resource collect by top data
         :return: host_metrics_{core_num}.json
         """
-        start_time = None
+        last_time = None
         while True:
-            if not start_time:
-                start_time = time.time()
-            end_time = time.time()
-            # 间隔60s采集一次
-            if int(end_time - start_time) != 60:
+            # 记录本次采集的时间
+            now_time = time.time()
+            # 第一次采集没有last time, 赋予初始上次采集时间
+            if not last_time:
+                last_time = now_time - 60
+            # 当前时间和上次采集时间的间隔为60s时采集一次
+            if int(now_time - last_time) < 60:
                 continue
-            start_time = time.time()
             top_data = self.get_top_data()
-            self.parse_single_top_data(top_data, int(start_time))
+            self.parse_single_top_data(top_data, int(now_time))
             with os.fdopen(os.open(os.path.join(self.output_path, f"host_metrics_{self.core_num}.json"),
                                    os.O_WRONLY | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR), 'w') as f:
                 f.write(json.dumps(self.top_res))
+            last_time = now_time
 
     def parse_single_top_data(self, top_data, top_time):
         """
@@ -117,13 +120,17 @@ class HostResourceCollect:
 
             # 处理mem数据
             if match_mem:
+                # 获取到的used数据有两种格式, 例如111/111+, 如果有'+', 替换成'0'
                 self.top_res.setdefault("node_mem_used", list()).append(
                     [top_time, int(match_mem[1].replace('+', '0')) * 1024])
                 continue
 
-            # 处理process数据(process_info[0]: pid, process_info[1]: RES, process_info[2]: cpu)
+            # 处理process数据(process_info[0]: pid; process_info[1]: RES; process_info[2]: cpu)
             if match_process:
                 process_info = list(match_process.groups())
+                # 把获取到的RES数据单位换算成字节, 有两种格式, 例如：0.1g/111:
+                # 有'g': 0.1*1024*1024*1024;
+                # 无'g': 111*1024
                 if process_info[1][-1] == "g":
                     process_info[1] = int(float(process_info[1][:-1]) * 1024 * 1024 * 1024)
                 else:
