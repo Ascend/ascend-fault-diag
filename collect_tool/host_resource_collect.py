@@ -55,7 +55,7 @@ class HostResourceCollect:
         Get the top result by 'top -o +RES -i -n 1 -b'
         :return: the top data
         """
-        top_cmd = "top -o +RES -i -n 1 -b"
+        top_cmd = "top -o +RES -n 1 -b"
         top_popen = subprocess.Popen(top_cmd.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         res = top_popen.stdout.read().decode("utf-8").strip()
         # 处理top数据中的转义字符
@@ -108,11 +108,11 @@ class HostResourceCollect:
         :param top_time: the time of top data collect
         :return: result save to top res
         """
-        top_count = 0
+        process_data_count = 0
         for line in top_data.splitlines():
-            if top_count > 9:  # 采集RES前十大
+            if process_data_count > 9:  # 采集RES前十大
                 break
-            top_count += 1
+
             match_mem = re.match(r'.*?KiB.*?Mem.*?free,.*?(\d+\+?).*?used,.*?buff/cache', line)
             match_process = re.match(
                 r'.*?(\d+)\s*\w+\s+\d+\s+\d+\s+[\d\.]+g?\s+([\d\.]+g?)\s+\d+\s+\w\s+([\d\.]+)\s+[\d\.]+\s+[\d:\.]+ .+$',
@@ -127,6 +127,7 @@ class HostResourceCollect:
 
             # 处理process数据(process_info[0]: pid; process_info[1]: RES; process_info[2]: cpu)
             if match_process:
+                process_data_count += 1
                 process_info = list(match_process.groups())
                 # 把获取到的RES数据单位换算成字节, 有两种格式, 例如：0.1g/111:
                 # 有'g': 0.1*1024*1024*1024;
