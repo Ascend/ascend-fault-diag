@@ -9,7 +9,7 @@ import subprocess
 import logging
 
 
-HEADER = ["time", "dev_id", "power", "rated_freq", "freq", "temp", "hbm_rate"]
+HEADER = ["time", "dev_id", "hbm_rate", "aicore_rate", "rated_freq", "freq", "temp", "power"]
 MODE = stat.S_IWUSR | stat.S_IRUSR
 
 
@@ -67,18 +67,18 @@ def collect_state_info(now_time, output_path):
     """
     file_name = "npu_smi_{}_details.csv"
     cmd_list = ["npu-smi", "info",    "-t", "common", "-i"]
-    grep_cmd = ["grep", "-E", "HBM|Freq|curFreq|Temperature|Power"]
+    grep_cmd = ["grep", "-E", "HBM|Aicore Usage Rate|Freq|curFreq|Temperature|Power"]
     for i in range(8):
         npu_info = subprocess.Popen([*cmd_list, str(i)], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         grep_info = subprocess.Popen(grep_cmd, shell=False, stdin=npu_info.stdout,
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        row_data = [now_time]
+        row_data = [now_time, i]
         for line in grep_info.stdout.readlines():
             line_list = line.decode().strip().split(":")
             row_data.append(line_list[1])
         with os.fdopen(os.open(os.path.join(output_path, file_name.format(i)), os.O_WRONLY, MODE), "a") as file:
             writer = csv.writer(file)
-            writer.writerow(row_data)
+            writer.writerow(row_data[:len(HEADER)])
 
 
 if __name__ == "__main__":
