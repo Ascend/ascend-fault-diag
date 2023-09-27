@@ -8,7 +8,7 @@ import subprocess
 import time
 
 HCCL_TOOL = '/usr/bin/hccn_tool'
-FILE_NAME = "npu_{}_detail.csv"
+FILE_NAME = "npu_{}_details.csv"
 FLAG = os.O_WRONLY | os.O_CREAT
 
 # echo used to print error information
