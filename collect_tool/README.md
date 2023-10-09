@@ -96,3 +96,7 @@ bash npu_net_check_collect.sh /xx/enviornment_check/worker-0/npu_info_after.txt
 **2、参数说明**
 
 `-o {OUTPUT_PATH}`，输出目录，必选
+
+**3、限制说明**
+
+要求驱动指令`npu-smi info`能正常使用，否则脚本采集无结果。
