@@ -63,6 +63,10 @@ class HostResourceCollect:
         pid_set = set()
         pid_flag = False
         for line in npu_smi_result.splitlines():
+            # 获取训练进程的pid, 示例如下：
+            # ' | NPU    Chip     | Process id  |  Process name  |   Process memory(MB)  |'
+            # ' +=================+=============+========================================+'
+            # ' | 0      0        | 1000        |  python        |   1024                |'
             if re.match(r'.*?NPU.*?Chip.*?Process.*?id.*?Process.*?name.*?Process memory.*?$', line):
                 pid_flag = True
             if pid_flag:
@@ -80,6 +84,7 @@ class HostResourceCollect:
         pid_list = self.get_train_pid()
         if not pid_list:
             return ""
+        # 只获取训练进程的top数据
         top_cmd = f"top -p {pid_list} -n 1 -b"
         top_popen = subprocess.Popen(top_cmd.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         res = top_popen.stdout.read().decode("utf-8").strip()
