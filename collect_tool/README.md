@@ -96,3 +96,7 @@ bash npu_net_check_collect.sh /xx/enviornment_check/worker-0/npu_info_after.txt
 **2、参数说明**
 
 `-o {OUTPUT_PATH}`，输出目录，必选
+
+**3、限制说明**
+
+要求驱动版本≥23.0.RC3，驱动指令`npu-smi info`能正常使用，且支持显示卡上的进程号，否则脚本采集无结果。

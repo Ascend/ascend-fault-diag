@@ -50,12 +50,42 @@ class HostResourceCollect:
         return core_num
 
     @staticmethod
-    def get_top_data():
+    def get_train_pid():
         """
-        Get the top result by 'top -o +RES -i -n 1 -b'
+        Get train pid list by 'npu-smi info'
+        :return: train pid list
+        """
+        npu_smi_cmd = "npu-smi info"
+        npu_smi_popen = subprocess.Popen(npu_smi_cmd.split(), shell=False, stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        npu_smi_result = npu_smi_popen.stdout.read().decode("utf-8").strip()
+
+        pid_set = set()
+        pid_flag = False
+        for line in npu_smi_result.splitlines():
+            # 获取训练进程的pid, 示例如下：
+            # ' | NPU    Chip     | Process id  |  Process name  |   Process memory(MB)  |'
+            # ' +=================+=============+========================================+'
+            # ' | 0      0        | 1000        |  python        |   1024                |'
+            if re.match(r'.*?NPU.*?Chip.*?Process.*?id.*?Process.*?name.*?Process memory.*?$', line):
+                pid_flag = True
+            if pid_flag:
+                pid_re = re.match(r'\|\s+(\d+)\s+\d+\s+\|\s+(\d+)\s+\|\s+pytho\w+\s+\|\s+\d+\s+\|$', line)
+                if pid_re:
+                    pid_set.add(pid_re[2])
+
+        return ','.join(list(pid_set))
+
+    def get_top_data(self):
+        """
+        Get the top result by 'top -p {pid_list} -n 1 -b'
         :return: the top data
         """
-        top_cmd = "top -o +RES -n 1 -b"
+        pid_list = self.get_train_pid()
+        if not pid_list:
+            return ""
+        # 只获取训练进程的top数据
+        top_cmd = f"top -p {pid_list} -n 1 -b"
         top_popen = subprocess.Popen(top_cmd.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         res = top_popen.stdout.read().decode("utf-8").strip()
         # 处理top数据中的转义字符
@@ -95,6 +125,8 @@ class HostResourceCollect:
             if int(now_time - last_time) < 60:
                 continue
             top_data = self.get_top_data()
+            if not top_data:
+                continue
             self.parse_single_top_data(top_data, int(now_time))
             with os.fdopen(os.open(os.path.join(self.output_path, f"host_metrics_{self.core_num}.json"),
                                    os.O_WRONLY | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR), 'w') as f:
@@ -110,12 +142,9 @@ class HostResourceCollect:
         """
         process_data_count = 0
         for line in top_data.splitlines():
-            if process_data_count > 9:  # 采集RES前十大
-                break
-
             match_mem = re.match(r'.*?KiB.*?Mem.*?free,.*?(\d+\+?).*?used,.*?buff/cache', line)
             match_process = re.match(
-                r'.*?(\d+)\s*\w+\s+\d+\s+\d+\s+[\d\.]+g?\s+([\d\.]+g?)\s+\d+\s+\w\s+([\d\.]+)\s+[\d\.]+\s+[\d:\.]+ .+$',
+                r'.*?(\d+)\s*\w+.*?\s+\d+\s+\d+\s+[\d\.]+g?\s+([\d\.]+g?)\s+\d+\s+\w\s+([\d\.]+)\s+[\d\.]+\s+[\d:\.]+ .+$',
                 line)
 
             # 处理mem数据
