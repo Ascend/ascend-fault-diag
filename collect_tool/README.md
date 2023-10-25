@@ -18,10 +18,10 @@ collect_tool
 
 **1、运行说明**
 
-`python3 npu_net_stat_collect.py -n {NPU_NUM} -wt {WAIT_TIME} -o {OUTPUT_PATH}`
+`python3 npu_net_stat_collect.py -n {NPU_NUM} -it {INTERVAL_TIME} -ct {COLLECT_TIME} -o {OUTPUT_PATH}`
 
 示例：
-`python3 npu_net_stat_collect.py -n 8 -wt 15 -o /xx/enviornment_check/worker-0`
+`python3 npu_net_stat_collect.py -n 8 -it 15 -ct 3600 -o /xx/enviornment_check/worker-0`
 
 执行结果： 在`{OUTPUT_PATH}`目录下生成`{NPU_NUM}`个`npu_(\d+)_details.csv`文件。  
 
@@ -29,7 +29,9 @@ collect_tool
 
 `-n {NPU_NUM}`，npu卡数，默认值为8
 
-`-wt {WAIT_TIME}`，采集间隔时间，单位秒，默认值为15
+`-it {INTERVAL_TIME}`，采集间隔时间，单位秒，默认值为15
+
+`-ct {COLLECT_TIME}`，采集总时间，单位秒，默认值为60
 
 `-o {OUTPUT_PATH}`，输出目录，必选
 
@@ -46,7 +48,7 @@ collect_tool
 示例：
 `python3 npu_smi_stat_collect.py -it 15 -o /xx/enviornment_check/worker-0`
 
-执行结果： 在`{OUTPUT_PATH}`目录下生成8个`npu_(\d+)_details.csv`文件。  
+执行结果： 在`{OUTPUT_PATH}`目录下生成8个`npu_smi_(\d+)_details.csv`文件。  
 
 **2、参数说明**
 
@@ -94,3 +96,7 @@ bash npu_net_check_collect.sh /xx/enviornment_check/worker-0/npu_info_after.txt
 **2、参数说明**
 
 `-o {OUTPUT_PATH}`，输出目录，必选
+
+**3、限制说明**
+
+要求驱动版本≥23.0.RC3，驱动指令`npu-smi info`能正常使用，且支持显示卡上的进程号，否则脚本采集无结果。
